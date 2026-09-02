@@ -1,0 +1,28 @@
+model Payment {
+  id            String  @id @default(uuid())
+  shipmentId    String  @unique
+  transactionId String? @unique
+  invoiceNumber String  @unique
+
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("BDT")
+
+  method PaymentMethod @default(BKASH)
+  status PaymentStatus @default(PENDING)
+
+  paymentUrl           String?
+  transactionReference String?
+
+  initiatedAt DateTime  @default(now())
+  paidAt      DateTime?
+  failedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id])
+
+  @@index([status])
+  @@index([transactionId])
+  @@map("payments")
+}

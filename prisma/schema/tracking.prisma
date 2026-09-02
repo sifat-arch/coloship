@@ -1,0 +1,17 @@
+model ShipmentTrackingEvent {
+  id          String         @id @default(uuid())
+  shipmentId  String
+  status      ShipmentStatus
+  description String
+  location    String?
+  hubId       String?
+  createdBy   String?
+  createdAt   DateTime       @default(now())
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id])
+  hub      Hub?     @relation(fields: [hubId], references: [id])
+
+  @@index([shipmentId, createdAt])
+  @@index([status])
+  @@map("shipment_tracking_events")
+}

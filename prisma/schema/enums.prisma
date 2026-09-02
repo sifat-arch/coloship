@@ -9,3 +9,63 @@ enum UserStatus {
   BLOCKED
   SUSPENDED
 }
+
+enum VehicleType {
+  BIKE
+  BICYCLE
+  MOTORCYCLE
+  VAN
+  TRUCK
+}
+
+enum ShipmentStatus {
+  CREATED
+  PAYMENT_PENDING
+  PAID
+  PICKUP_REQUESTED
+  COURIER_ASSIGNED
+  PICKED_UP
+  AT_ORIGIN_HUB
+  IN_TRANSIT
+  AT_DESTINATION_HUB
+  OUT_FOR_DELIVERY
+  DELIVERED
+  DELIVERY_FAILED
+  CANCELLED
+  RETURNED
+}
+
+enum DeliveryType {
+  STANDARD
+  EXPRESS
+}
+
+enum AssignmentStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+}
+
+enum PaymentMethod {
+  BKASH
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum NotificationType {
+  SHIPMENT
+  PAYMENT
+  SYSTEM
+  DELIVERY
+}
+
+enum EarningStatus {
+  PENDING
+  PAID
+}

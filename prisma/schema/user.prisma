@@ -12,12 +12,11 @@ model User {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  // courierProfile     CourierProfile?
-  // addresses          Address[]
-  // shipments          Shipment[]
-  // refreshTokens      RefreshToken[]
-  // notifications      Notification[]
-  // auditLogs          AuditLog[]
+  courierProfile CourierProfile?
+  addresses      Address[]
+  shipments      Shipment[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
 
   @@index([role])
   @@index([status])

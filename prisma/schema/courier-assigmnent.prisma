@@ -1,0 +1,21 @@
+model CourierAssignment {
+  id          String           @id @default(uuid())
+  shipmentId  String
+  courierId   String
+  status      AssignmentStatus @default(PENDING)
+  assignedAt  DateTime         @default(now())
+  acceptedAt  DateTime?
+  completedAt DateTime?
+  rejectedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  shipment Shipment       @relation(fields: [shipmentId], references: [id])
+  courier  CourierProfile @relation(fields: [courierId], references: [id])
+
+  @@unique([shipmentId, courierId])
+  @@index([shipmentId])
+  @@index([courierId])
+  @@index([status])
+  @@map("courier_assignments")
+}
