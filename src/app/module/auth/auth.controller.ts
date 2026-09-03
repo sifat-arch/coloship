@@ -12,24 +12,6 @@ const registerCustomer = catchAsync(async (req: Request, res: Response) => {
 
   await AuthService.registerCustomer(payload);
 
-  // const { accessToken, refreshToken, user } = result;
-
-  // Access token
-  // res.cookie("accessToken", accessToken, {
-  //   httpOnly: true,
-  //   secure: config.node_env === "production",
-  //   sameSite: config.node_env === "production" ? "none" : "lax",
-  //   maxAge: 1000 * 60 * 60 * 24, // 1 day
-  // });
-
-  // // Refresh token
-  // res.cookie("refreshToken", refreshToken, {
-  //   httpOnly: true,
-  //   secure: config.node_env === "production",
-  //   sameSite: config.node_env === "production" ? "none" : "lax",
-  //   maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-  // });
-
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
@@ -68,6 +50,38 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
     data: {
       accessToken,
       refreshToken,
+    },
+  });
+});
+
+const verifyCustomerEmail = catchAsync(async (req: Request, res: Response) => {
+  const payload = req.body;
+
+  const result = await AuthService.verifyCustomerEmail(payload);
+
+  const { accessToken, refreshToken, user } = result;
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "none",
+    maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
+  });
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "none",
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: "Email Verified successfully",
+    data: {
+      accessToken,
+      refreshToken,
+      user,
     },
   });
 });
@@ -226,4 +240,5 @@ export const AuthController = {
   registerCourier,
   forgotPassword,
   resetPassword,
+  verifyCustomerEmail,
 };

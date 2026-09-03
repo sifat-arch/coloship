@@ -17,6 +17,7 @@ import type {
   IRegisterCustomerPayload,
   IRequestUser,
   IResetPasswordPayload,
+  IVerifyCustomerEmailPayload,
 } from "./auth.interface";
 import { AppError } from "../../utils/AppError";
 import { OAuth2Client, TokenPayload } from "google-auth-library";
@@ -200,6 +201,127 @@ const registerCustomer = async (payload: IRegisterCustomerPayload) => {
     refreshToken,
   };
    */
+};
+
+const verifyCustomerEmail = async (payload: IVerifyCustomerEmailPayload) => {
+  const email = payload.email.trim().toLowerCase();
+  const { otp } = payload;
+
+  // 1. Check if user already exists in DB
+  const isUserExist = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (isUserExist) {
+    if (isUserExist.emailVerified) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Email is already verified!");
+    }
+    if (isUserExist.status === UserStatus.BLOCKED) {
+      throw new AppError(httpStatus.FORBIDDEN, "User account is blocked!");
+    }
+    if (isUserExist.isDeleted) {
+      throw new AppError(httpStatus.BAD_REQUEST, "User account is deleted!");
+    }
+  }
+
+  // 2. Fetch OTP from Redis
+  const otpKey = `customer-registration-otp:${email}`;
+  const redisOtp = await redisClient.get(otpKey);
+
+  if (!redisOtp) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "OTP has expired or is invalid!",
+    );
+  }
+
+  if (redisOtp !== otp) {
+    throw new AppError(httpStatus.BAD_REQUEST, "OTP does not match!");
+  }
+
+  // Delete OTP key after validation
+  await redisClient.del(otpKey);
+
+  // 3. Fetch Stored Customer Data from Redis
+  const customerRegistrationKey = `customer-registration-data:${email}`;
+  const redisCustomerData = await redisClient.get(customerRegistrationKey);
+
+  if (!redisCustomerData) {
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      "Registration session expired or data not found!",
+    );
+  }
+
+  const customerPayload = JSON.parse(redisCustomerData);
+
+  // 4. Create User in Database
+  const createdUser = await prisma.user.create({
+    data: {
+      name: customerPayload.name,
+      email: customerPayload.email,
+      password: customerPayload.password,
+      role: Role.CUSTOMER,
+      status: UserStatus.ACTIVE,
+      emailVerified: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      status: true,
+      emailVerified: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  // Delete registration temp data from Redis
+  await redisClient.del(customerRegistrationKey);
+
+  // 5. Send Welcome Email
+  const templatePath = path.join(
+    process.cwd(),
+    "src/app/templates/welcome-email.ejs",
+  );
+
+  const html = await ejs.renderFile(templatePath, {
+    name: createdUser.name,
+  });
+
+  await transporter.sendMail({
+    from: config.email_sender,
+    to: email,
+    subject: "Welcome to Coloship!",
+    html,
+  });
+
+  // 6. Generate Tokens
+  const jwtPayload = {
+    userId: createdUser.id,
+    name: createdUser.name,
+    email: createdUser.email,
+    role: createdUser.role,
+  };
+
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_access_secret,
+    config.jwt_access_expires_in as SignOptions,
+  );
+
+  const refreshToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_refresh_secret,
+    config.jwt_refresh_expires_in as SignOptions,
+  );
+
+  return {
+    user: createdUser,
+    accessToken,
+    refreshToken,
+  };
 };
 
 const loginUser = async (payload: ILoginUserPayload) => {
@@ -713,4 +835,5 @@ export const AuthService = {
   registerCourier,
   forgotPassword,
   resetPassword,
+  verifyCustomerEmail,
 };

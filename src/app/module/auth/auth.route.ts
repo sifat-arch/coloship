@@ -45,4 +45,10 @@ router.post(
   validateRequest(UserValidation.resetPasswordValidationSchema),
   AuthController.resetPassword,
 );
+
+router.post(
+  "/verify-customer-email",
+  validateRequest(UserValidation.verifyCustomerEmailValidationSchema),
+  AuthController.verifyCustomerEmail,
+);
 export const AuthRoutes = router;

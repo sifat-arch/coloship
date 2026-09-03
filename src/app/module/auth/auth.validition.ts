@@ -64,10 +64,21 @@ const resetPasswordValidationSchema = z.object({
     .min(6, "Password must be at least 6 characters"),
 });
 
+const verifyCustomerEmailValidationSchema = z.object({
+  email: z
+    .string({ message: "Email is required" })
+    .email("Invalid email format")
+    .transform((val) => val.trim().toLowerCase()),
+  otp: z
+    .string({ message: "OTP is required" })
+    .length(6, "OTP must be exactly 6 digits"),
+});
+
 export const UserValidation = {
   registerCustomerSchema,
   loginCustomerSchema,
   registerCourierValidationSchema,
   forgotPasswordSchema,
   resetPasswordValidationSchema,
+  verifyCustomerEmailValidationSchema,
 };
