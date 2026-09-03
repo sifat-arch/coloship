@@ -10,11 +10,13 @@ import { prisma } from "../../lib/prisma";
 import { jwtUtils } from "../../utils/jwt";
 import httpStatus from "http-status";
 import type {
+  IForgotPasswordPayload,
   IGoogleLoginIdTokenPayload,
   ILoginUserPayload,
   IRegisterCourierPayload,
   IRegisterCustomerPayload,
   IRequestUser,
+  IResetPasswordPayload,
 } from "./auth.interface";
 import { AppError } from "../../utils/AppError";
 import { OAuth2Client, TokenPayload } from "google-auth-library";
@@ -548,7 +550,7 @@ const registerCourier = async (payload: IRegisterCourierPayload) => {
   };
 };
 
-const forgotPassword = async (payload: any) => {
+const forgotPassword = async (payload: IForgotPasswordPayload) => {
   const { email } = payload;
 
   const isUserExist = await prisma.user.findUnique({
@@ -586,13 +588,96 @@ const forgotPassword = async (payload: any) => {
   const key = `forgot-password-otp:${isUserExist.email}`;
 
   await redisClient.set(key, otp, {
-    expiration: {
-      type: "EX",
-      value: 5 * 60,
+    EX: 300, // 5 minutes = 300 seconds
+  });
+
+  await redisClient.set(key, otp, {
+    EX: 300,
+  });
+
+  console.log("========== OTP CREATED ==========");
+  console.log("KEY:", JSON.stringify(key));
+  console.log("OTP:", otp);
+  console.log("TTL:", await redisClient.ttl(key));
+  console.log("GET:", await redisClient.get(key));
+};
+const resetPassword = async (payload: IResetPasswordPayload) => {
+  console.log("========== RESET PASSWORD CALLED ==========");
+  console.log("TIME:", new Date().toISOString());
+  console.log("PAYLOAD:", payload);
+  const { email, otp, newPassword } = payload;
+
+  const isUserExist = await prisma.user.findUnique({
+    where: {
+      email,
     },
   });
+
+  if (!isUserExist) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found!");
+  }
+
+  if (isUserExist.status === UserStatus.BLOCKED) {
+    throw new AppError(httpStatus.FORBIDDEN, "User account is blocked!");
+  }
+
+  // if (!isUserExist.emailVerified) {
+  //   throw new AppError(httpStatus.BAD_REQUEST, "User email is not verified!");
+  // }
+
+  if (isUserExist.isDeleted) {
+    throw new AppError(httpStatus.BAD_REQUEST, "User account is deleted!");
+  }
+
+  // Google Auth সম্পর্কিত চেক
+  if (isUserExist.authProvider === "GOOGLE" || isUserExist.googleId) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "This account was created using Google login. Password reset is not available.",
+    );
+  }
+
+  const key = `forgot-password-otp:${isUserExist.email}`;
+
+  console.log("RESET EMAIL:", JSON.stringify(isUserExist.email));
+  console.log("RESET KEY:", JSON.stringify(key));
+
+  const ttl = await redisClient.ttl(key);
+  console.log("RESET TTL:", ttl);
+
+  const redisOtp = await redisClient.get(key);
+  console.log("RESET OTP:", redisOtp);
+
+  // const redisOtp = await redisClient.get(key);
+
+  if (!redisOtp) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "OTP has expired or is invalid!",
+    );
+  }
+
+  if (redisOtp !== otp) {
+    throw new AppError(httpStatus.BAD_REQUEST, "OTP does not match!");
+  }
+
+  const hashedNewPassword = await bcrypt.hash(
+    newPassword,
+    Number(config.bcrypt_salt_rounds),
+  );
+
+  await prisma.user.update({
+    where: {
+      email: isUserExist.email,
+    },
+    data: {
+      password: hashedNewPassword,
+    },
+  });
+
+  await redisClient.del([key]);
+  console.log("========== RESET PASSWORD SUCCESS ==========");
 };
-const resetPassword = async (payload: any) => {};
 
 export const AuthService = {
   registerCustomer,

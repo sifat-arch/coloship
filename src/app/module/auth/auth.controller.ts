@@ -210,6 +210,17 @@ const forgotPassword = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const resetPassword = catchAsync(async (req: Request, res: Response) => {
+  const result = await AuthService.resetPassword(req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message:
+      "Password reset successful! You can now login with your new password.",
+    data: null,
+  });
+});
+
 export const AuthController = {
   registerCustomer,
   loginUser,
@@ -218,4 +229,5 @@ export const AuthController = {
   googleLogin,
   registerCourier,
   forgotPassword,
+  resetPassword,
 };
