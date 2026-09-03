@@ -103,8 +103,61 @@ const registerCustomer = async (payload: IRegisterCustomerPayload) => {
 
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 8);
+  // create otp
+  const otpkey = `customer-registration-otp:${email}`;
+  const otpValue = crypto.randomInt(100000, 1000000).toString();
 
-  // Create user
+  await redisClient.set(otpkey, otpValue, {
+    expiration: {
+      type: "EX",
+      value: 300,
+    },
+  });
+
+  // create customer and set in redis
+
+  const redisUserDataPayload = {
+    name,
+    email,
+    password: hashedPassword,
+  };
+
+  const customerRegistrationKey = `customer-registration-data:${email}`;
+
+  await redisClient.set(
+    customerRegistrationKey,
+    JSON.stringify(redisUserDataPayload),
+    {
+      expiration: {
+        type: "EX",
+        value: 300,
+      },
+    },
+  );
+
+  const templatePath = path.join(
+    process.cwd(),
+    "src/app/templates/registration-user-otp.ejs",
+  );
+
+  const templateData = {
+    name,
+    email,
+    otpValue,
+    expirationMinutes: (5 * 60) / 60,
+  };
+
+  const html = await ejs.renderFile(templatePath, templateData);
+
+  await transporter.sendMail({
+    from: config.email_sender,
+    to: email,
+    subject: "Email Verification",
+    html,
+  });
+
+  /***
+   *   // Create user
   const createdUser = await prisma.user.create({
     data: {
       name,
@@ -146,58 +199,8 @@ const registerCustomer = async (payload: IRegisterCustomerPayload) => {
     accessToken,
     refreshToken,
   };
+   */
 };
-
-// const loginUser = async (payload: ILoginUserPayload) => {
-//   const { password } = payload;
-//   const email = payload.email.trim().toLowerCase();
-
-//   const user = await prisma.user.findUnique({
-//     where: { email },
-//   });
-
-//   if (!user) {
-//     throw new Error("User not found");
-//   }
-
-//   if (user.status === UserStatus.BLOCKED) {
-//     throw new Error("User is blocked");
-//   }
-
-//   if (user.isDeleted || user.status === UserStatus.DELETED) {
-//     throw new Error("User is deleted");
-//   }
-
-//   const isPasswordMatched = await bcrypt.compare(password, user.password);
-
-//   if (!isPasswordMatched) {
-//     throw new Error("Invalid credentials");
-//   }
-
-//   const jwtPayload = {
-//     userId: user.id,
-//     name: user.name,
-//     email: user.email,
-//     role: user.role,
-//   };
-
-//   const accessToken = jwtUtils.createToken(
-//     jwtPayload,
-//     config.jwt_access_secret,
-//     config.jwt_access_expires_in as SignOptions,
-//   );
-
-//   const refreshToken = jwtUtils.createToken(
-//     jwtPayload,
-//     config.jwt_refresh_secret,
-//     config.jwt_refresh_expires_in as SignOptions,
-//   );
-
-//   return {
-//     accessToken,
-//     refreshToken,
-//   };
-// };
 
 const loginUser = async (payload: ILoginUserPayload) => {
   const { password } = payload;

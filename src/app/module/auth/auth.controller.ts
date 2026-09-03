@@ -10,35 +10,31 @@ import config from "../../config";
 const registerCustomer = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
 
-  const result = await AuthService.registerCustomer(payload);
+  await AuthService.registerCustomer(payload);
 
-  const { accessToken, refreshToken, user } = result;
+  // const { accessToken, refreshToken, user } = result;
 
   // Access token
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: config.node_env === "production",
-    sameSite: config.node_env === "production" ? "none" : "lax",
-    maxAge: 1000 * 60 * 60 * 24, // 1 day
-  });
+  // res.cookie("accessToken", accessToken, {
+  //   httpOnly: true,
+  //   secure: config.node_env === "production",
+  //   sameSite: config.node_env === "production" ? "none" : "lax",
+  //   maxAge: 1000 * 60 * 60 * 24, // 1 day
+  // });
 
-  // Refresh token
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: config.node_env === "production",
-    sameSite: config.node_env === "production" ? "none" : "lax",
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-  });
+  // // Refresh token
+  // res.cookie("refreshToken", refreshToken, {
+  //   httpOnly: true,
+  //   secure: config.node_env === "production",
+  //   sameSite: config.node_env === "production" ? "none" : "lax",
+  //   maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+  // });
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
     message: "Customer registered successfully",
-    data: {
-      user,
-      accessToken,
-      refreshToken,
-    },
+    data: null,
   });
 });
 
