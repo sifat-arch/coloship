@@ -23,6 +23,9 @@ import { OAuth2Client, TokenPayload } from "google-auth-library";
 import { googleClient } from "../../lib/googleAuth";
 import { redisClient } from "../../lib/redis";
 import crypto from "crypto";
+import { transporter } from "../../lib/nodemailer";
+import ejs from "ejs";
+import path from "path";
 
 // const registerPatient = async (payload: IRegisterPatientPayload) => {
 // 	const { name, password } = payload;
@@ -591,20 +594,25 @@ const forgotPassword = async (payload: IForgotPasswordPayload) => {
     EX: 300, // 5 minutes = 300 seconds
   });
 
-  await redisClient.set(key, otp, {
-    EX: 300,
+  const templatePath = path.join(
+    process.cwd(),
+    "src/app/templates/forgot-password.ejs",
+  );
+
+  const html = await ejs.renderFile(templatePath, {
+    name: isUserExist.name,
+    otp,
+    expirationMinutes: (5 * 60) / 60,
   });
 
-  console.log("========== OTP CREATED ==========");
-  console.log("KEY:", JSON.stringify(key));
-  console.log("OTP:", otp);
-  console.log("TTL:", await redisClient.ttl(key));
-  console.log("GET:", await redisClient.get(key));
+  await transporter.sendMail({
+    from: config.email_sender,
+    to: isUserExist.email,
+    subject: "Forgot Password",
+    html,
+  });
 };
 const resetPassword = async (payload: IResetPasswordPayload) => {
-  console.log("========== RESET PASSWORD CALLED ==========");
-  console.log("TIME:", new Date().toISOString());
-  console.log("PAYLOAD:", payload);
   const { email, otp, newPassword } = payload;
 
   const isUserExist = await prisma.user.findUnique({
@@ -629,7 +637,7 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
     throw new AppError(httpStatus.BAD_REQUEST, "User account is deleted!");
   }
 
-  // Google Auth সম্পর্কিত চেক
+  // Google Auth
   if (isUserExist.authProvider === "GOOGLE" || isUserExist.googleId) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
@@ -676,7 +684,21 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
   });
 
   await redisClient.del([key]);
-  console.log("========== RESET PASSWORD SUCCESS ==========");
+  const templatePath = path.join(
+    process.cwd(),
+    "src/app/templates/reset-password.ejs",
+  );
+
+  const html = await ejs.renderFile(templatePath, {
+    name: isUserExist.name || "User",
+    email: isUserExist.email,
+  });
+  await transporter.sendMail({
+    from: config.email_sender,
+    to: isUserExist.email,
+    subject: "password changed",
+    html,
+  });
 };
 
 export const AuthService = {
