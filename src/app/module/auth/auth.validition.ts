@@ -43,8 +43,17 @@ const registerCourierValidationSchema = z.object({
   licenseNumber: z.string().optional(),
   profileImageUrl: z.string().optional(),
 });
+
+const forgotPasswordSchema = z.object({
+  email: z
+    .string({ message: "Email is required" })
+    .email("Invalid email format")
+    .transform((value) => value.trim().toLowerCase()),
+});
+
 export const UserValidation = {
   registerCustomerSchema,
   loginCustomerSchema,
   registerCourierValidationSchema,
+  forgotPasswordSchema,
 };

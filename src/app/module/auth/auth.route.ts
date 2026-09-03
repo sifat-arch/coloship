@@ -33,4 +33,10 @@ router.post(
   validateRequest(UserValidation.registerCourierValidationSchema),
   AuthController.registerCourier,
 );
+
+router.post(
+  "/forgot-password",
+  validateRequest(UserValidation.forgotPasswordSchema),
+  AuthController.forgotPassword,
+);
 export const AuthRoutes = router;

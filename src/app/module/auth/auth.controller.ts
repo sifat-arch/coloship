@@ -199,6 +199,17 @@ const registerCourier = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const forgotPassword = catchAsync(async (req: Request, res: Response) => {
+  const result = await AuthService.forgotPassword(req.body);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Password reset OTP sent successfully.",
+    data: null,
+  });
+});
+
 export const AuthController = {
   registerCustomer,
   loginUser,
@@ -206,4 +217,5 @@ export const AuthController = {
   refreshToken,
   googleLogin,
   registerCourier,
+  forgotPassword,
 };

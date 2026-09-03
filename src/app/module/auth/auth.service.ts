@@ -19,6 +19,8 @@ import type {
 import { AppError } from "../../utils/AppError";
 import { OAuth2Client, TokenPayload } from "google-auth-library";
 import { googleClient } from "../../lib/googleAuth";
+import { redisClient } from "../../lib/redis";
+import crypto from "crypto";
 
 // const registerPatient = async (payload: IRegisterPatientPayload) => {
 // 	const { name, password } = payload;
@@ -546,6 +548,52 @@ const registerCourier = async (payload: IRegisterCourierPayload) => {
   };
 };
 
+const forgotPassword = async (payload: any) => {
+  const { email } = payload;
+
+  const isUserExist = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+
+  if (!isUserExist) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found!");
+  }
+
+  if (isUserExist.status === UserStatus.BLOCKED) {
+    throw new AppError(httpStatus.FORBIDDEN, "User account is blocked!");
+  }
+
+  // if (!isUserExist.emailVerified) {
+  //   throw new AppError(httpStatus.BAD_REQUEST, "User email is not verified!");
+  // }
+
+  if (isUserExist.isDeleted) {
+    throw new AppError(httpStatus.BAD_REQUEST, "User account is deleted!");
+  }
+
+  // Google Auth সম্পর্কিত চেক
+  if (isUserExist.authProvider === "GOOGLE" || isUserExist.googleId) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "This account was created using Google login. Password reset is not available.",
+    );
+  }
+
+  const otp = crypto.randomInt(100000, 1000000).toString();
+
+  const key = `forgot-password-otp:${isUserExist.email}`;
+
+  await redisClient.set(key, otp, {
+    expiration: {
+      type: "EX",
+      value: 5 * 60,
+    },
+  });
+};
+const resetPassword = async (payload: any) => {};
+
 export const AuthService = {
   registerCustomer,
   loginUser,
@@ -553,4 +601,6 @@ export const AuthService = {
   refreshToken,
   googleLogin,
   registerCourier,
+  forgotPassword,
+  resetPassword,
 };

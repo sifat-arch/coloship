@@ -31,3 +31,12 @@ export interface IRegisterCourierPayload {
   licenseNumber?: string;
   profileImageUrl?: string;
 }
+export interface IForgotPasswordPayload {
+  email: string;
+}
+
+export interface IResetPasswordPayload {
+  email: string;
+  newPassword: string;
+  otp: string;
+}
