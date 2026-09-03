@@ -6,6 +6,7 @@ enum Role {
 
 enum UserStatus {
   ACTIVE
+  PENDING
   BLOCKED
   SUSPENDED
 }
@@ -68,4 +69,10 @@ enum NotificationType {
 enum EarningStatus {
   PENDING
   PAID
+}
+
+
+enum AuthProvider {
+  GOOGLE 
+  CREDENTIAL
 }
