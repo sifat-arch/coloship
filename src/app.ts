@@ -12,6 +12,7 @@ import { notFound } from "./app/middleware/notFound";
 import { AuthRoutes } from "./app/module/auth/auth.route";
 import { UserRoutes } from "./app/module/user/user.route";
 import { AddressRoutes } from "./app/module/address/address.route";
+import { ShipmentRoutes } from "./app/module/shipment/shiptment.route";
 
 const app: Application = express();
 
@@ -32,6 +33,7 @@ app.use(cookieParser());
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/user", UserRoutes);
 app.use("/api/v1/addresses", AddressRoutes);
+app.use("/api/v1/shipments", ShipmentRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {

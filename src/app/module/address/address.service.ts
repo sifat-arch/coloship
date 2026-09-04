@@ -50,6 +50,29 @@ const createAddress = async (
   });
 };
 
+// address.service.ts
+const getAllAddresses = async (userId: string): Promise<Address[]> => {
+  return await prisma.address.findMany({
+    where: {
+      userId,
+      isDeleted: false,
+    },
+    orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+  });
+};
+
+// address.service.ts
+const getDefaultAddress = async (userId: string): Promise<Address | null> => {
+  return await prisma.address.findFirst({
+    where: {
+      userId,
+      isDefault: true,
+      isDeleted: false,
+    },
+  });
+};
+
 export const AddressService = {
   createAddress,
+  getAllAddresses,
 };

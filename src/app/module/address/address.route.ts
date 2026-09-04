@@ -16,4 +16,6 @@ router.post(
   AddressController.createAddress,
 );
 
+router.get("/", auth(Role.CUSTOMER), AddressController.getAllAddresses);
+
 export const AddressRoutes = router;
