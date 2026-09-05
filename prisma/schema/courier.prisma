@@ -14,6 +14,7 @@ model CourierProfile {
   updatedAt       DateTime    @updatedAt
 
   user        User                @relation(fields: [userId], references: [id])
+  shipments Shipment[]
 
   @@index([currentHubId])
   @@index([isAvailable])

@@ -3,6 +3,8 @@ model Shipment {
   trackingNumber String @unique
   customerId     String
 
+  courierId      String?
+
   // Address References
   pickupAddressId   String
   deliveryAddressId String
@@ -26,11 +28,14 @@ model Shipment {
   deletedAt DateTime?
 
   // Relations
+  courier        CourierProfile? @relation(fields: [courierId], references: [id]) 
+
   customer        User                    @relation(fields: [customerId], references: [id])
   pickupAddress   Address                 @relation("PickupAddress", fields: [pickupAddressId], references: [id])
   deliveryAddress Address                 @relation("DeliveryAddress", fields: [deliveryAddressId], references: [id])
   trackingEvents  ShipmentTrackingEvent[]
   payment         Payment?
+
 
   @@index([customerId])
   @@index([status])

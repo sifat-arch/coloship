@@ -35,8 +35,39 @@ const getMyShipments = catchAsync(async (req: Request, res: Response) => {
     data: result.data,
   });
 });
+const getSingleShipment = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user?.userId;
+
+  const result = await ShipmentService.getSingleShipment(
+    id as string,
+    userId as string,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Shipment details retrieved successfully!",
+    data: result,
+  });
+});
+
+const trackShipment = catchAsync(async (req: Request, res: Response) => {
+  const { trackingNumber } = req.params;
+
+  const result = await ShipmentService.trackShipment(trackingNumber as string);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Shipment tracking information retrieved successfully!",
+    data: result,
+  });
+});
 
 export const ShipmentController = {
   createShipment,
   getMyShipments,
+  getSingleShipment,
+  trackShipment,
 };

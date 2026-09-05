@@ -10,12 +10,25 @@ model Payment {
   method PaymentMethod @default(BKASH)
   status PaymentStatus @default(PENDING)
 
+  merchantInvoiceNumber  String @unique
+  bkashPaymentId  String?      @unique
+  paymentReference  String?  //user email / phone number
+  paidAt      String?
+
+
+
+
   paymentUrl           String?
   transactionReference String?
 
   initiatedAt DateTime  @default(now())
-  paidAt      DateTime?
   failedAt    DateTime?
+
+  gatewayResponse Json?
+
+  refundTrxiId   String?
+  refundAmount   Decimal  @db.Decimal(10,2)
+  refundedAt     String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

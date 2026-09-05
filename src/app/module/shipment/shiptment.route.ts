@@ -20,4 +20,8 @@ router.get(
   auth(Role.CUSTOMER),
   ShipmentController.getMyShipments,
 );
+
+router.get("/track/:trackingNumber", ShipmentController.trackShipment);
+
+router.get("/:id", auth(Role.CUSTOMER), ShipmentController.getSingleShipment);
 export const ShipmentRoutes = router;
