@@ -4,19 +4,24 @@ model CourierProfile {
   phone           String
   nidNumber       String?     @unique
   vehicleType     VehicleType
+  role            Role       @default(COURIER)
+  status          UserStatus   @default(ACTIVE)
+  isApproved      Boolean     @default(false)
   vehicleNumber   String?
   licenseNumber   String?
   profileImageUrl String?
   isAvailable     Boolean     @default(false)
-  currentHubId    String?
+  isDeleted       Boolean      @default(false)
+  deletedAt       DateTime?
   joinedAt        DateTime    @default(now())
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
   user        User                @relation(fields: [userId], references: [id])
   shipments Shipment[]
+  notifications  Notification[]
 
-  @@index([currentHubId])
   @@index([isAvailable])
   @@map("courier_profiles")
+  @@index([isApproved])
 }

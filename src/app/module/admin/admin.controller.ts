@@ -24,6 +24,51 @@ const assignCourierToShipment = catchAsync(
   },
 );
 
+const getAllUsersController = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await AdminService.getAllUsers(req.query);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Users retrieved successfully",
+      data: result.data,
+      meta: result.meta,
+    });
+  },
+);
+
+const getAllCouriersController = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await AdminService.getAllCouriers(req.query);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Couriers retrieved successfully",
+      data: result.data,
+      meta: result.meta,
+    });
+  },
+);
+
+const getAvailableCouriersController = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await AdminService.getAvailableCouriers(req.query);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Available couriers retrieved successfully",
+      data: result.data,
+      meta: result.meta,
+    });
+  },
+);
+
 export const AdminController = {
   assignCourierToShipment,
+  getAllCouriersController,
+  getAllUsersController,
+  getAvailableCouriersController,
 };

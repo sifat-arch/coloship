@@ -403,8 +403,8 @@ const cancelShipmentSimple = async (
     where: { id: shipmentId },
     data: {
       status: ShipmentStatus.CANCELLED,
-      cancelReason: reason || "Canceled by user",
-      canceledAt: new Date(),
+      // cancelReason: reason || "Canceled by user",
+      // canceledAt: new Date(),
     },
     include: { payment: true },
   });

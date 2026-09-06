@@ -15,5 +15,23 @@ router.patch(
   validateRequest(AdminValidation.assignCourierValidationSchema),
   AdminController.assignCourierToShipment,
 );
+router.get(
+  "/all-users",
+  auth(Role.ADMIN),
+
+  AdminController.getAllUsersController,
+);
+router.get(
+  "/all-couriers",
+  auth(Role.ADMIN),
+
+  AdminController.getAllCouriersController,
+);
+router.get(
+  "/available-courier",
+  auth(Role.ADMIN),
+
+  AdminController.getAvailableCouriersController,
+);
 
 export const AdminRoutes = router;

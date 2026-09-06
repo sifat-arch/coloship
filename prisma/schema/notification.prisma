@@ -1,6 +1,7 @@
 model Notification {
   id        String           @id @default(uuid())
   userId    String
+  CourierId String
   title     String
   message   String
   type      NotificationType
@@ -8,6 +9,7 @@ model Notification {
   createdAt DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courier CourierProfile @relation(fields: [CourierId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@index([createdAt])
