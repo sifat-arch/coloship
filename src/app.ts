@@ -15,6 +15,7 @@ import { AddressRoutes } from "./app/module/address/address.route";
 import { ShipmentRoutes } from "./app/module/shipment/shiptment.route";
 import { CourierRoutes } from "./app/module/courier/courier.route";
 import { AdminRoutes } from "./app/module/admin/admin.route";
+import { PaymentRoutes } from "./app/module/payment/payment.route";
 
 const app: Application = express();
 
@@ -38,6 +39,7 @@ app.use("/api/v1/addresses", AddressRoutes);
 app.use("/api/v1/shipments", ShipmentRoutes);
 app.use("/api/v1/courier", CourierRoutes);
 app.use("/api/v1/admin", AdminRoutes);
+app.use("/api/v1/payments", PaymentRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {

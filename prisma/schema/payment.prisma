@@ -1,41 +1,36 @@
 model Payment {
-  id            String  @id @default(uuid())
-  shipmentId    String  @unique
-  transactionId String? @unique
-  invoiceNumber String  @unique
+  id String @id @default(uuid())
+
+  // Shipment Relation (Appointment-এর পরিবর্তে Shipment)
+  shipmentId String   @unique
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  status PaymentStatus @default(UNPAID)
+  method PaymentMethod @default(BKASH)
 
   amount   Decimal @db.Decimal(10, 2)
   currency String  @default("BDT")
 
-  method PaymentMethod @default(BKASH)
-  status PaymentStatus @default(PENDING)
+  paymentGateway        String  @default("bkash")
+  merchantInvoiceNumber String  @unique // shipment id
+  paymentUrl            String?
 
-  merchantInvoiceNumber  String @unique
-  bkashPaymentId  String?      @unique
-  paymentReference  String?  //user email / phone number
-  paidAt      String?
-
-
-
-
-  paymentUrl           String?
-  transactionReference String?
-
-  initiatedAt DateTime  @default(now())
-  failedAt    DateTime?
+  bkashPaymentId String? @unique
+  bkashTrxId     String? @unique // bakshTrxId টাইপো সংশোধন করা হয়েছে
+  payerReference String? // customer email / phone
+  paidAt         String?
 
   gatewayResponse Json?
 
-  refundTrxiId   String?
-  refundAmount   Decimal  @db.Decimal(10,2)
-  refundedAt     String?
+  refundTrxId  String?
+  refundAmount Decimal? @db.Decimal(10, 2)
+  refundReason String?
+  refundedAt   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  shipment Shipment @relation(fields: [shipmentId], references: [id])
-
   @@index([status])
-  @@index([transactionId])
+  @@index([bkashTrxId])
   @@map("payments")
 }

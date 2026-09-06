@@ -307,7 +307,7 @@ const getSingleShipment = async (shipmentId: string, userId: string) => {
 //   });
 // };
 
-// tracking 
+// tracking
 
 const trackShipment = async (trackingNumber: string) => {
   const shipment = await prisma.shipment.findFirst({
@@ -347,15 +347,75 @@ const trackShipment = async (trackingNumber: string) => {
   });
 
   if (!shipment) {
-    throw new AppError(httpStatus.NOT_FOUND, "Shipment not found with this tracking number!");
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      "Shipment not found with this tracking number!",
+    );
   }
 
   return shipment;
+};
+
+import {
+  PaymentMethod,
+  PaymentStatus,
+  ShipmentStatus,
+} from "../../../generated/prisma/enums";
+import { PaymentService } from "../payment/payment.service";
+
+const cancelShipmentSimple = async (
+  shipmentId: string,
+  userId: string,
+  reason?: string,
+) => {
+  // ১. শিপমেন্ট ও পেমেন্ট ডাটা বের করা
+  const shipment = await prisma.shipment.findUnique({
+    where: { id: shipmentId },
+    include: { payment: true },
+  });
+
+  if (!shipment) {
+    throw new AppError(httpStatus.NOT_FOUND, "Shipment not found!");
+  }
+
+  if (shipment.customerId !== userId) {
+    throw new AppError(httpStatus.FORBIDDEN, "Unauthorized action!");
+  }
+
+  const payment = shipment.payment;
+
+  if (
+    payment &&
+    payment.method === PaymentMethod.BKASH &&
+    payment.status === PaymentStatus.PAID
+  ) {
+    await PaymentService.refundPayment(
+      shipment.id,
+      reason || "Canceled & Refunded by user",
+    );
+  } else if (payment && payment.status !== PaymentStatus.PAID) {
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: PaymentStatus.CANCELED },
+    });
+  }
+
+  const updatedShipment = await prisma.shipment.update({
+    where: { id: shipmentId },
+    data: {
+      status: ShipmentStatus.CANCELLED,
+      cancelReason: reason || "Canceled by user",
+      canceledAt: new Date(),
+    },
+    include: { payment: true },
+  });
+
+  return updatedShipment;
 };
 
 export const ShipmentService = {
   createShipment,
   getMyShipments,
   getSingleShipment,
-  trackShipment
+  trackShipment,
 };

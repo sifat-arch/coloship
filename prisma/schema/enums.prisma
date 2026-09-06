@@ -48,17 +48,18 @@ enum AssignmentStatus {
   COMPLETED
 }
 
+enum PaymentStatus {
+  UNPAID
+  PAID
+  FAILED
+  CANCELED
+  REFUNDED
+}
+
 enum PaymentMethod {
   BKASH
+  COD
 }
-
-enum PaymentStatus {
-  PENDING
-  SUCCESS
-  FAILED
-  CANCELLED
-}
-
 enum NotificationType {
   SHIPMENT
   PAYMENT

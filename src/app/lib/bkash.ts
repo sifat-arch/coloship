@@ -106,3 +106,35 @@ export const getBkashIdToken = async () => {
     throw new Error(error.message);
   }
 };
+
+export const refundBkashPayment = async (payload: {
+  paymentID: string;
+  trxID: string;
+  amount: string;
+  reason: string;
+  sku?: string;
+}) => {
+  const idToken = await getBkashIdToken();
+
+  const response = await fetch(
+    `${config.bkash_base_url}/tokenized/checkout/payment/refund`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: idToken as string,
+        "X-App-Key": config.bkash_app_key as string,
+      },
+      body: JSON.stringify({
+        paymentID: payload.paymentID,
+        trxID: payload.trxID,
+        amount: payload.amount,
+        sku: payload.sku || "shipment_refund",
+        reason: payload.reason,
+      }),
+    },
+  );
+
+  return await response.json();
+};
