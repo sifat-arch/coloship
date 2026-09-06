@@ -368,7 +368,6 @@ const cancelShipmentSimple = async (
   userId: string,
   reason?: string,
 ) => {
-  // ১. শিপমেন্ট ও পেমেন্ট ডাটা বের করা
   const shipment = await prisma.shipment.findUnique({
     where: { id: shipmentId },
     include: { payment: true },
@@ -418,4 +417,5 @@ export const ShipmentService = {
   getMyShipments,
   getSingleShipment,
   trackShipment,
+  cancelShipmentSimple,
 };

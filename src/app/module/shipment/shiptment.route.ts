@@ -24,4 +24,10 @@ router.get(
 router.get("/track/:trackingNumber", ShipmentController.trackShipment);
 
 router.get("/:id", auth(Role.CUSTOMER), ShipmentController.getSingleShipment);
+
+router.patch(
+  "/:id/cancel",
+  auth("CUSTOMER"),
+  ShipmentController.cancelShipment,
+);
 export const ShipmentRoutes = router;

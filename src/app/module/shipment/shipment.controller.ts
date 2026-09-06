@@ -65,9 +65,29 @@ const trackShipment = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const cancelShipment = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { reason } = req.body || {};
+  const userId = req.user?.userId;
+
+  const result = await ShipmentService.cancelShipmentSimple(
+    id as string,
+    userId as string,
+    reason,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Shipment canceled successfully",
+    data: result,
+  });
+});
+
 export const ShipmentController = {
   createShipment,
   getMyShipments,
   getSingleShipment,
   trackShipment,
+  cancelShipment,
 };
