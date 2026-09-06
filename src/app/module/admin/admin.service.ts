@@ -5,6 +5,7 @@ import { prisma } from "../../lib/prisma";
 import { IUserFilterRequest } from "./admin.interface";
 import {
   Prisma,
+  Role,
   UserStatus,
   VehicleType,
 } from "../../../generated/prisma/client";
@@ -292,9 +293,92 @@ const getAvailableCouriers = async (query: Record<string, any>) => {
   };
 };
 
+const approveCourier = async (courierProfileId: string) => {
+  const courier = await prisma.courierProfile.findUnique({
+    where: {
+      id: courierProfileId,
+    },
+  });
+
+  if (!courier) {
+    throw new AppError(httpStatus.NOT_FOUND, "Courier profile not found");
+  }
+
+  if (courier.isApproved) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Courier is already approved");
+  }
+
+  const result = await prisma.courierProfile.update({
+    where: {
+      id: courierProfileId,
+    },
+    data: {
+      isApproved: true,
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  return result;
+};
+
+const updateUserStatus = async (userId: string, status: UserStatus) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (user.isDeleted) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Cannot update status of a deleted user",
+    );
+  }
+
+  if (user.role === Role.ADMIN) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Admin account status cannot be updated from this endpoint",
+    );
+  }
+
+  if (status === UserStatus.PENDING) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "User status cannot be changed to PENDING",
+    );
+  }
+
+  if (user.status === status) {
+    throw new AppError(httpStatus.BAD_REQUEST, `User is already ${status}`);
+  }
+
+  const result = await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      status,
+    },
+    include: {
+      courierProfile: true,
+    },
+  });
+
+  return result;
+};
+
 export const AdminService = {
   assignCourierToShipment,
   getAllUsers,
   getAllCouriers,
   getAvailableCouriers,
+  approveCourier,
+  updateUserStatus
 };

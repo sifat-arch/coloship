@@ -34,4 +34,17 @@ router.get(
   AdminController.getAvailableCouriersController,
 );
 
+router.patch(
+  "/couriers/:id/approve",
+  auth(Role.ADMIN),
+  AdminController.approveCourierController,
+);
+
+router.patch(
+  "/users/:id/status",
+  auth(Role.ADMIN),
+  validateRequest(AdminValidation.updateUserStatusValidationSchema),
+  AdminController.updateUserStatusController,
+);
+
 export const AdminRoutes = router;

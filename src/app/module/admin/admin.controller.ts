@@ -66,9 +66,42 @@ const getAvailableCouriersController = catchAsync(
   },
 );
 
+const approveCourierController = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const result = await AdminService.approveCourier(id as string);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Courier account approved successfully!",
+      data: result,
+    });
+  },
+);
+
+const updateUserStatusController = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const result = await AdminService.updateUserStatus(id as string, status);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: `User status changed to ${status} successfully!`,
+      data: result,
+    });
+  },
+);
+
 export const AdminController = {
   assignCourierToShipment,
   getAllCouriersController,
   getAllUsersController,
   getAvailableCouriersController,
+  approveCourierController,
+  updateUserStatusController,
 };
