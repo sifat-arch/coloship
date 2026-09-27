@@ -33,7 +33,7 @@ const toggleAvailability = async (userId: string, isAvailable?: boolean) => {
       vehicleType: true,
       vehicleNumber: true,
       isAvailable: true,
-      currentHubId: true,
+      // currentHubId: true,
       updatedAt: true,
     },
   });
