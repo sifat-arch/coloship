@@ -24,24 +24,20 @@ const loginCustomerSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-const registerCourierValidationSchema = z.object({
-  name: z
-    .string({ message: "Name is required" })
-    .min(1, "Name cannot be empty"),
-  email: z
-    .string({ message: "Email is required" })
-    .email("Invalid email format"),
-  password: z
-    .string({ message: "Password is required" })
-    .min(6, "Password must be at least 6 characters"),
-  phone: z.string({ message: "Phone number is required" }),
+export const applyCourierValidationSchema = z.object({
+  phone: z
+    .string({ message: "Phone number is required" })
+    .min(1, "Phone number cannot be empty"),
+
   vehicleType: z.nativeEnum(VehicleType, {
     message: "Vehicle type is required",
   }),
+
   nidNumber: z.string().optional(),
+
   vehicleNumber: z.string().optional(),
+
   licenseNumber: z.string().optional(),
-  profileImageUrl: z.string().optional(),
 });
 
 const forgotPasswordSchema = z.object({
@@ -77,7 +73,7 @@ const verifyCustomerEmailValidationSchema = z.object({
 export const UserValidation = {
   registerCustomerSchema,
   loginCustomerSchema,
-  registerCourierValidationSchema,
+  applyCourierValidationSchema,
   forgotPasswordSchema,
   resetPasswordValidationSchema,
   verifyCustomerEmailValidationSchema,

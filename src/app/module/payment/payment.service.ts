@@ -1,10 +1,16 @@
 import { Prisma } from "../../../generated/prisma/client";
-import { PaymentMethod, PaymentStatus } from "../../../generated/prisma/enums";
+import {
+  NotificationType,
+  PaymentMethod,
+  PaymentStatus,
+  UserStatus,
+} from "../../../generated/prisma/enums";
 import config from "../../config";
 import { getBkashIdToken, refundBkashPayment } from "../../lib/bkash";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import httpStatus from "http-status";
+import { NotificationService } from "../notification/notification.service";
 
 // const initiatePayment = async (
 //   userId: string,
@@ -286,6 +292,17 @@ const initiatePayment = async (
     throw new AppError(httpStatus.NOT_FOUND, "Shipment not found!");
   }
 
+  // Check customer status
+  if (
+    shipment.customer.status === UserStatus.SUSPENDED ||
+    shipment.customer.status === UserStatus.BLOCKED
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Your account is suspended. You cannot initiate payments.",
+    );
+  }
+
   // ২. অলরেডি পেমেন্ট করা হয়ে থাকলে আটকানো
   const existingPayment = await prisma.payment.findUnique({
     where: { shipmentId },
@@ -496,6 +513,21 @@ const handleBkashCallback = async (paymentID: string, status: string) => {
     },
   });
 
+  // Create notification for customer on successful payment
+  await Promise.all([
+    NotificationService.createNotification({
+      userId: payment.shipment.customerId,
+      title: "Payment Success",
+      message: `Payment of ৳${payment.amount} received via bKash.`,
+      type: NotificationType.PAYMENT,
+    }),
+    NotificationService.notifyAdmins({
+      title: "Payment Received",
+      message: `Payment of ৳${payment.amount} received via bKash for shipment #${payment.shipment.trackingNumber}.`,
+      type: NotificationType.PAYMENT,
+    }),
+  ]);
+
   return {
     status: PaymentStatus.PAID,
     message: "Payment completed successfully.",
@@ -506,11 +538,27 @@ const handleBkashCallback = async (paymentID: string, status: string) => {
 const refundPayment = async (shipmentId: string, refundReason: string) => {
   const payment = await prisma.payment.findUnique({
     where: { shipmentId },
-    include: { shipment: true },
+    include: {
+      shipment: {
+        include: {
+          customer: true,
+        },
+      },
+    },
   });
 
   if (!payment) {
     throw new AppError(httpStatus.NOT_FOUND, "Payment record not found!");
+  }
+
+  if (
+    payment.shipment.customer.status === UserStatus.SUSPENDED ||
+    payment.shipment.customer.status === UserStatus.BLOCKED
+  ) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Your account is suspended. You cannot request refunds.",
+    );
   }
 
   if (payment.status !== PaymentStatus.PAID) {
@@ -567,6 +615,38 @@ const refundPayment = async (shipmentId: string, refundReason: string) => {
     },
   });
 
+  // Notify customer
+  await NotificationService.createNotification({
+    userId: payment.shipment.customerId,
+    title: "Cancelled & Refunded",
+    message: `Shipment cancelled. ৳${payment.amount} refunded to your bKash wallet.`,
+    type: NotificationType.PAYMENT,
+  });
+
+  // Notify admin
+  await NotificationService.notifyAdmins({
+    title: "Shipment Refunded",
+    message: `৳${payment.amount} refunded to customer for cancelled shipment #${payment.shipment.trackingNumber}.`,
+    type: NotificationType.PAYMENT,
+  });
+
+  // If courier was assigned, notify courier
+  if (payment.shipment.courierId) {
+    const courierProfile = await prisma.courierProfile.findUnique({
+      where: { id: payment.shipment.courierId },
+      select: { userId: true },
+    });
+    if (courierProfile) {
+      await NotificationService.createNotification({
+        userId: courierProfile.userId,
+        courierId: payment.shipment.courierId,
+        title: "Task Cancelled",
+        message: `Shipment #${payment.shipment.trackingNumber} was cancelled by sender. No action needed.`,
+        type: NotificationType.DELIVERY,
+      });
+    }
+  }
+
   return {
     message: "Payment refunded successfully!",
     refundTrxId: refundResponse.refundTrxID,
@@ -574,8 +654,35 @@ const refundPayment = async (shipmentId: string, refundReason: string) => {
   };
 };
 
+const getPaymentDetails = async (paymentId: string) => {
+  const payment = await prisma.payment.findFirst({
+    where: {
+      OR: [
+        { bkashPaymentId: paymentId },
+        { id: paymentId },
+        { merchantInvoiceNumber: paymentId },
+      ],
+    },
+    include: {
+      shipment: {
+        include: {
+          pickupAddress: true,
+          deliveryAddress: true,
+        },
+      },
+    },
+  });
+
+  if (!payment) {
+    throw new AppError(httpStatus.NOT_FOUND, "Payment details not found!");
+  }
+
+  return payment;
+};
+
 export const PaymentService = {
   initiatePayment,
   handleBkashCallback,
   refundPayment,
+  getPaymentDetails,
 };

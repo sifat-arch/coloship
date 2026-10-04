@@ -2,9 +2,11 @@ import { Router } from "express";
 import { Role } from "../../../generated/prisma/enums";
 import { auth } from "../../middleware/checkAuth";
 import { AuthController } from "./auth.controller";
-import { AuthService } from "./auth.service";
+
 import { validateRequest } from "../../middleware/validateRequest";
 import { UserValidation } from "./auth.validition";
+import { upload } from "../../lib/multer";
+import { CourierController } from "../courier/courier.controller";
 
 const router = Router();
 
@@ -25,13 +27,22 @@ router.get(
 );
 router.post("/refresh-token", AuthController.refreshToken);
 
-router.post("/google", AuthService.googleLogin);
+router.post("/google", AuthController.googleLogin);
 
 router.post(
   "/register-courier",
-  // upload.single("profileImage"),
-  validateRequest(UserValidation.registerCourierValidationSchema),
-  AuthController.registerCourier,
+  auth(),
+  upload.fields([
+    {
+      name: "resume",
+      maxCount: 1,
+    },
+    {
+      name: "profileImage",
+      maxCount: 1,
+    },
+  ]),
+  AuthController.applyAsCourier,
 );
 
 router.post(
@@ -51,4 +62,5 @@ router.post(
   validateRequest(UserValidation.verifyCustomerEmailValidationSchema),
   AuthController.verifyCustomerEmail,
 );
+router.post("/logout", AuthController.logout);
 export const AuthRoutes = router;

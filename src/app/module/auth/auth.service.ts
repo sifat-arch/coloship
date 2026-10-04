@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
 import {
   AuthProvider,
+  NotificationType,
   Role,
   UserStatus,
 } from "../../../generated/prisma/enums";
@@ -9,11 +10,12 @@ import config from "../../config";
 import { prisma } from "../../lib/prisma";
 import { jwtUtils } from "../../utils/jwt";
 import httpStatus from "http-status";
+import { NotificationService } from "../notification/notification.service";
 import type {
+  IApplyCourierPayload,
   IForgotPasswordPayload,
   IGoogleLoginIdTokenPayload,
   ILoginUserPayload,
-  IRegisterCourierPayload,
   IRegisterCustomerPayload,
   IRequestUser,
   IResetPasswordPayload,
@@ -27,64 +29,7 @@ import crypto from "crypto";
 import { transporter } from "../../lib/nodemailer";
 import ejs from "ejs";
 import path from "path";
-
-// const registerPatient = async (payload: IRegisterPatientPayload) => {
-// 	const { name, password } = payload;
-// 	const email = payload.email.trim().toLowerCase();
-
-// 	const isUserExists = await prisma.user.findUnique({
-// 		where: { email },
-// 	});
-
-// 	if (isUserExists) {
-// 		throw new Error("User with this email already exists");
-// 	}
-
-// 	const hashedPassword = await bcrypt.hash(password, 8);
-
-// 	const createdUser = await prisma.user.create({
-// 		data: {
-// 			name,
-// 			email,
-// 			password: hashedPassword,
-// 			role: Role.CUSTOMER,
-// 			status: UserStatus.ACTIVE,
-// 			emailVerified: false,
-// 			patient: {
-// 				create: { name, email },
-// 			},
-// 		},
-// 		omit: { password: true },
-// 		include: { patient: true },
-// 	});
-
-// 	const { patient, ...user } = createdUser;
-// 	const jwtPayload = {
-// 		userId: user.id,
-// 		name: user.name,
-// 		email: user.email,
-// 		role: user.role,
-// 	};
-
-// 	const accessToken = jwtUtils.createToken(
-// 		jwtPayload,
-// 		config.jwt_access_secret,
-// 		config.jwt_access_expires_in as SignOptions,
-// 	);
-
-// 	const refreshToken = jwtUtils.createToken(
-// 		jwtPayload,
-// 		config.jwt_refresh_secret,
-// 		config.jwt_refresh_expires_in as SignOptions,
-// 	);
-
-// 	return {
-// 		user,
-// 		patient,
-// 		accessToken,
-// 		refreshToken,
-// 	};
-// };
+import { uploadFileToCloudinary } from "../../lib/helper";
 
 const registerCustomer = async (payload: IRegisterCustomerPayload) => {
   const { name, password } = payload;
@@ -107,6 +52,10 @@ const registerCustomer = async (payload: IRegisterCustomerPayload) => {
   // create otp
   const otpkey = `customer-registration-otp:${email}`;
   const otpValue = crypto.randomInt(100000, 1000000).toString();
+
+  if (config.node_env === "development") {
+    console.log(`[dev-otp]${email} ${otpValue}`);
+  }
 
   await redisClient.set(otpkey, otpValue, {
     expiration: {
@@ -430,8 +379,8 @@ const refreshToken = async (token: string) => {
     where: { id: data.userId },
   });
 
-  if (!user || user.isDeleted || user.status !== UserStatus.ACTIVE) {
-    throw new Error("User is inactive or not found");
+  if (!user || user.isDeleted || user.status === UserStatus.BLOCKED) {
+    throw new Error("User account is blocked, deleted or not found");
   }
 
   const jwtPayload = {
@@ -512,10 +461,7 @@ const googleLogin = async (payload: IGoogleLoginIdTokenPayload) => {
         throw new AppError(httpStatus.NOT_FOUND, "Email is not verified");
       }
 
-      if (
-        ifCustomerExistWithCredentials.isDeleted ||
-        ifCustomerExistWithCredentials.status === UserStatus.SUSPENDED
-      ) {
+      if (ifCustomerExistWithCredentials.isDeleted) {
         throw new AppError(httpStatus.NOT_FOUND, "User is Deleted");
       }
 
@@ -545,11 +491,7 @@ const googleLogin = async (payload: IGoogleLoginIdTokenPayload) => {
   }
 
   if (user.status === UserStatus.BLOCKED) {
-    throw new AppError(httpStatus.NOT_FOUND, "User is blocked");
-  }
-
-  if (user.status === UserStatus.SUSPENDED) {
-    throw new AppError(httpStatus.NOT_FOUND, "Email is suspended");
+    throw new AppError(httpStatus.FORBIDDEN, "User account is blocked");
   }
 
   // if (
@@ -584,98 +526,80 @@ const googleLogin = async (payload: IGoogleLoginIdTokenPayload) => {
   };
 };
 
-const registerCourier = async (payload: IRegisterCourierPayload) => {
-  const {
-    name,
-    password,
-    phone,
-    nidNumber,
-    vehicleType,
-    vehicleNumber,
-    licenseNumber,
-    profileImageUrl,
-  } = payload;
-
-  const email = payload.email.trim().toLowerCase();
-
-  // 1. Check existing user
-  const isUserExists = await prisma.user.findUnique({
-    where: { email },
+// apply as courier
+const applyAsCourier = async (
+  userId: string,
+  payload: IApplyCourierPayload,
+  resume: Express.Multer.File | null,
+  profileImage: Express.Multer.File | null,
+) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      courierProfile: true,
+    },
   });
 
-  if (isUserExists) {
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (!user.emailVerified) {
     throw new AppError(
-      httpStatus.CONFLICT,
-      "User with this email already exists",
+      httpStatus.FORBIDDEN,
+      "Please verify your email before applying as a courier",
     );
   }
 
-  // 2. Hash password
-  const hashedPassword = await bcrypt.hash(password, 8);
+  if (user.courierProfile) {
+    throw new AppError(
+      httpStatus.CONFLICT,
+      "You have already applied as a courier",
+    );
+  }
 
-  // 3. Prisma Transaction to create User & CourierProfile atomically
-  const result = await prisma.$transaction(async (tx) => {
-    // Create User (Status can be PENDING until Admin approves)
-    const createdUser = await tx.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role: Role.COURIER,
-        status: UserStatus.PENDING, // Admin approval needed
-        emailVerified: false,
-      },
-      omit: {
-        password: true,
-      },
-    });
+  // Resume upload - optional
+  const resumeUploadResult = resume
+    ? await uploadFileToCloudinary(resume, "courier/resumes")
+    : null;
 
-    // Create Courier Profile
-    const createdCourierProfile = await tx.courierProfile.create({
-      data: {
-        userId: createdUser.id,
-        phone,
-        nidNumber,
-        vehicleType,
-        vehicleNumber,
-        licenseNumber,
-        profileImageUrl,
-        isAvailable: false,
-      },
-    });
+  // Profile image upload - optional
+  const profileImageUploadResult = profileImage
+    ? await uploadFileToCloudinary(profileImage, "courier/profile-images")
+    : null;
 
-    return {
-      user: createdUser,
-      courierProfile: createdCourierProfile,
-    };
+  const courierProfile = await prisma.courierProfile.create({
+    data: {
+      userId: user.id,
+
+      phone: payload.phone,
+      nidNumber: payload.nidNumber,
+      vehicleType: payload.vehicleType,
+      vehicleNumber: payload.vehicleNumber,
+      licenseNumber: payload.licenseNumber,
+
+      profileImageUrl: profileImageUploadResult?.secure_url ?? null,
+
+      profileImageId: profileImageUploadResult?.public_id ?? null,
+
+      resume: resumeUploadResult?.secure_url ?? null,
+
+      resumePublicId: resumeUploadResult?.public_id ?? null,
+
+      status: UserStatus.PENDING,
+      isApproved: false,
+      isAvailable: false,
+    },
   });
 
-  // Optional: Approval ছাড়াও রেজিস্ট্রেশনের পরেই অটো-লগইন করাতে চাইলে JWT টোকেন জেনারেট করতে পারেন
-  const jwtPayload = {
-    userId: result.user.id,
-    name: result.user.name,
-    email: result.user.email,
-    role: result.user.role,
-  };
+  // Notify Admins about new courier application
+  await NotificationService.notifyAdmins({
+    title: "New Courier Application",
+    message: `New courier applied: ${user.name} (Needs verification).`,
+    type: NotificationType.SYSTEM,
+  });
 
-  const accessToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_access_secret,
-    config.jwt_access_expires_in as SignOptions,
-  );
-
-  const refreshToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_refresh_secret,
-    config.jwt_refresh_expires_in as SignOptions,
-  );
-
-  return {
-    user: result.user,
-    courierProfile: result.courierProfile,
-    accessToken,
-    refreshToken,
-  };
+  return courierProfile;
 };
 
 const forgotPassword = async (payload: IForgotPasswordPayload) => {
@@ -712,6 +636,10 @@ const forgotPassword = async (payload: IForgotPasswordPayload) => {
   }
 
   const otp = crypto.randomInt(100000, 1000000).toString();
+
+  if (config.node_env === "development") {
+    console.log(`[forgot-pass-otp]${email} ${otp}`);
+  }
 
   const key = `forgot-password-otp:${isUserExist.email}`;
 
@@ -832,7 +760,7 @@ export const AuthService = {
   getMe,
   refreshToken,
   googleLogin,
-  registerCourier,
+  applyAsCourier,
   forgotPassword,
   resetPassword,
   verifyCustomerEmail,

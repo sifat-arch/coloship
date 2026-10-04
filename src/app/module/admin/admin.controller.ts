@@ -24,6 +24,53 @@ const assignCourierToShipment = catchAsync(
   },
 );
 
+const unassignCourierFromShipment = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const result = await AdminService.unassignCourierFromShipment(id as string);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Courier unassigned from shipment successfully!",
+      data: result,
+    });
+  },
+);
+
+const getAllShipmentsController = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await AdminService.getAllShipments(req.query);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Shipments retrieved successfully",
+      data: result.data,
+      meta: result.meta,
+    });
+  },
+);
+
+const updateShipmentStatusByAdmin = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const result = await AdminService.updateShipmentStatusByAdmin(
+      id as string,
+      req.body,
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: `Shipment status updated to ${req.body.status} successfully!`,
+      data: result,
+    });
+  },
+);
+
 const getAllUsersController = catchAsync(
   async (req: Request, res: Response) => {
     const result = await AdminService.getAllUsers(req.query);
@@ -80,6 +127,20 @@ const approveCourierController = catchAsync(
     });
   },
 );
+const rejectCourierController = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const result = await AdminService.rejectCourier(id as string);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Courier profile rejected successfully!",
+      data: result,
+    });
+  },
+);
 
 const updateUserStatusController = catchAsync(
   async (req: Request, res: Response) => {
@@ -99,9 +160,13 @@ const updateUserStatusController = catchAsync(
 
 export const AdminController = {
   assignCourierToShipment,
+  unassignCourierFromShipment,
+  getAllShipmentsController,
+  updateShipmentStatusByAdmin,
   getAllCouriersController,
   getAllUsersController,
   getAvailableCouriersController,
   approveCourierController,
   updateUserStatusController,
+  rejectCourierController,
 };

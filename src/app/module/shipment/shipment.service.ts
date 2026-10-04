@@ -7,17 +7,42 @@ import {
   IShipmentQueryFilters,
 } from "./shipment.interface";
 import { Prisma, Shipment } from "../../../generated/prisma/client";
+import { NotificationType, UserStatus } from "../../../generated/prisma/enums";
 import {
   calculateDeliveryFee,
   generateTrackingNumber,
 } from "../../utils/shipment";
 import { AppError } from "../../utils/AppError";
 import { differenceInHours } from "date-fns";
+import { NotificationService } from "../notification/notification.service";
 
 const createShipment = async (
   customerId: string,
   payload: ICreateShipmentPayload,
 ): Promise<Shipment> => {
+  // 0. Check Customer Status
+  const customer = await prisma.user.findUnique({
+    where: { id: customerId },
+  });
+
+  if (!customer) {
+    throw new AppError(httpStatus.NOT_FOUND, "Customer not found!");
+  }
+
+  if (customer.status === UserStatus.SUSPENDED) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Your account is suspended. You cannot create new shipments.",
+    );
+  }
+
+  if (customer.status === UserStatus.BLOCKED) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Your account is blocked. You cannot create new shipments.",
+    );
+  }
+
   // 1. Fallback Logic: pickupAddressId না পাঠালে deliveryAddressId-কেই পিকআপ হিসেবে ধরে নেবে
   const pickupAddressId = payload.pickupAddressId || payload.deliveryAddressId;
   const deliveryAddressId = payload.deliveryAddressId;
@@ -64,8 +89,8 @@ const createShipment = async (
   const trackingNumber = generateTrackingNumber();
 
   // 5. Create Shipment inside Database Transaction
-  return await prisma.$transaction(async (tx) => {
-    const shipment = await tx.shipment.create({
+  const shipment = await prisma.$transaction(async (tx) => {
+    const created = await tx.shipment.create({
       data: {
         trackingNumber,
         customerId,
@@ -87,15 +112,32 @@ const createShipment = async (
     // Create Initial Tracking Event Entry
     await tx.shipmentTrackingEvent.create({
       data: {
-        shipmentId: shipment.id,
+        shipmentId: created.id,
         status: "CREATED",
         description: "Shipment booking created successfully.",
         location: pickupAddress.city,
       },
     });
 
-    return shipment;
+    return created;
   });
+
+  // Notify Admin: "New parcel booked from Mirpur to Gulshan."
+  await NotificationService.notifyAdmins({
+    title: "New Shipment",
+    message: `New parcel booked from ${shipment.pickupAddress?.area || "Pickup"} to ${shipment.deliveryAddress?.area || "Delivery"}.`,
+    type: NotificationType.SHIPMENT,
+  });
+
+  // Notify Customer
+  await NotificationService.createNotification({
+    userId: customerId,
+    title: "Shipment Created",
+    message: `Parcel #${shipment.trackingNumber} booked successfully.`,
+    type: NotificationType.SHIPMENT,
+  });
+
+  return shipment;
 };
 
 const getMyShipments = async (
@@ -164,6 +206,7 @@ const getMyShipments = async (
     include: {
       pickupAddress: true,
       deliveryAddress: true,
+      payment: true,
     },
   });
 
@@ -192,6 +235,7 @@ const getSingleShipment = async (shipmentId: string, userId: string) => {
     include: {
       pickupAddress: true,
       deliveryAddress: true,
+      payment: true,
       trackingEvents: {
         orderBy: {
           createdAt: "desc",
@@ -381,6 +425,28 @@ const cancelShipmentSimple = async (
     throw new AppError(httpStatus.FORBIDDEN, "Unauthorized action!");
   }
 
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found!");
+  }
+
+  if (user.status === UserStatus.SUSPENDED) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Your account is suspended. You cannot modify or cancel shipments.",
+    );
+  }
+
+  if (user.status === UserStatus.BLOCKED) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Your account is blocked. You cannot modify or cancel shipments.",
+    );
+  }
+
   const payment = shipment.payment;
 
   if (
@@ -392,11 +458,45 @@ const cancelShipmentSimple = async (
       shipment.id,
       reason || "Canceled & Refunded by user",
     );
-  } else if (payment && payment.status !== PaymentStatus.PAID) {
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: { status: PaymentStatus.CANCELED },
+  } else {
+    if (payment && payment.status !== PaymentStatus.PAID) {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: PaymentStatus.CANCELED },
+      });
+    }
+
+    // Notify customer
+    await NotificationService.createNotification({
+      userId: shipment.customerId,
+      title: "Shipment Cancelled",
+      message: `Shipment #${shipment.trackingNumber} has been cancelled successfully.`,
+      type: NotificationType.SHIPMENT,
     });
+
+    // Notify admin
+    await NotificationService.notifyAdmins({
+      title: "Shipment Cancelled",
+      message: `Shipment #${shipment.trackingNumber} was cancelled by sender.`,
+      type: NotificationType.SHIPMENT,
+    });
+
+    // If courier was assigned, notify courier
+    if (shipment.courierId) {
+      const courierProfile = await prisma.courierProfile.findUnique({
+        where: { id: shipment.courierId },
+        select: { userId: true },
+      });
+      if (courierProfile) {
+        await NotificationService.createNotification({
+          userId: courierProfile.userId,
+          courierId: shipment.courierId,
+          title: "Task Cancelled",
+          message: `Shipment #${shipment.trackingNumber} was cancelled by sender. No action needed.`,
+          type: NotificationType.DELIVERY,
+        });
+      }
+    }
   }
 
   const updatedShipment = await prisma.shipment.update({

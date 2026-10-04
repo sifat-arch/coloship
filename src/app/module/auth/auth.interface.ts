@@ -20,16 +20,12 @@ export interface IGoogleLoginIdTokenPayload {
   idToken: string;
 }
 
-export interface IRegisterCourierPayload {
-  name: string;
-  email: string;
-  password: string;
+export interface IApplyCourierPayload {
   phone: string;
   vehicleType: VehicleType;
   nidNumber?: string;
   vehicleNumber?: string;
   licenseNumber?: string;
-  profileImageUrl?: string;
 }
 export interface IForgotPasswordPayload {
   email: string;

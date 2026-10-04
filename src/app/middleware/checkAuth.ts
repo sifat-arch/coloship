@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import type { JwtPayload } from "jsonwebtoken";
-import type { Role } from "../../generated/prisma/enums";
+import type { Role, UserStatus } from "../../generated/prisma/enums";
 import config from "../config";
 import { prisma } from "../lib/prisma";
 import { catchAsync } from "../utils/catchAsync";
@@ -14,6 +14,7 @@ declare global {
 				name: string;
 				userId: string;
 				role: Role;
+				status: UserStatus;
 			};
 		}
 	}
@@ -71,6 +72,7 @@ export const auth = (...requiredRoles: Role[]) => {
 			name,
 			userId,
 			role,
+			status: user.status,
 		};
 
 		next();

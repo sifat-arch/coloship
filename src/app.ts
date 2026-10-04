@@ -16,6 +16,7 @@ import { ShipmentRoutes } from "./app/module/shipment/shiptment.route";
 import { CourierRoutes } from "./app/module/courier/courier.route";
 import { AdminRoutes } from "./app/module/admin/admin.route";
 import { PaymentRoutes } from "./app/module/payment/payment.route";
+import { NotificationRoutes } from "./app/module/notification/notification.route";
 
 const app: Application = express();
 
@@ -35,11 +36,13 @@ app.use(cookieParser());
 
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/user", UserRoutes);
+app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/addresses", AddressRoutes);
 app.use("/api/v1/shipments", ShipmentRoutes);
 app.use("/api/v1/courier", CourierRoutes);
 app.use("/api/v1/admin", AdminRoutes);
 app.use("/api/v1/payments", PaymentRoutes);
+app.use("/api/v1/notifications", NotificationRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {

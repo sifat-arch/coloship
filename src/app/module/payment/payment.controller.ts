@@ -32,11 +32,11 @@ const handleBkashCallback = catchAsync(async (req: Request, res: Response) => {
 
   if (result.status === PaymentStatus.PAID) {
     return res.redirect(
-      `${config.frontend_url}/payment/success?paymentId=${paymentID}`,
+      `${config.frontend_url}/customer/payment/success?paymentId=${paymentID}`,
     );
   } else {
     return res.redirect(
-      `${config.frontend_url}/payment/failed?paymentId=${paymentID}`,
+      `${config.frontend_url}/customer/payment/failed?paymentId=${paymentID}`,
     );
   }
 });
@@ -77,8 +77,21 @@ const refundPayment = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getPaymentDetails = catchAsync(async (req: Request, res: Response) => {
+  const { paymentId } = req.params;
+  const result = await PaymentService.getPaymentDetails(paymentId as string);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Payment details retrieved successfully",
+    data: result,
+  });
+});
+
 export const PaymentController = {
   handleBkashCallback,
   initiatePayment,
   refundPayment,
+  getPaymentDetails,
 };

@@ -1,27 +1,33 @@
 model CourierProfile {
-  id              String      @id @default(uuid())
-  userId          String      @unique
+  id              String       @id @default(uuid())
+  userId          String       @unique
   phone           String
-  nidNumber       String?     @unique
+  nidNumber       String?      @unique
   vehicleType     VehicleType
-  role            Role       @default(COURIER)
-  status          UserStatus   @default(ACTIVE)
-  isApproved      Boolean     @default(false)
+  role            Role         @default(COURIER)
+  VerificationStatus VerificationStatus @default(PENDING)
+  isApproved      Boolean      @default(false)
   vehicleNumber   String?
   licenseNumber   String?
+
   profileImageUrl String?
-  isAvailable     Boolean     @default(false)
+  profileImageId  String?
+
+  resume          String?
+  resumePublicId  String?
+
+  isAvailable     Boolean      @default(false)
   isDeleted       Boolean      @default(false)
   deletedAt       DateTime?
-  joinedAt        DateTime    @default(now())
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  joinedAt        DateTime     @default(now())
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  user        User                @relation(fields: [userId], references: [id])
-  shipments Shipment[]
-  notifications  Notification[]
+  user            User           @relation(fields: [userId], references: [id])
+  shipments       Shipment[]
+  notifications   Notification[]
 
   @@index([isAvailable])
-  @@map("courier_profiles")
   @@index([isApproved])
+  @@map("courier_profiles")
 }

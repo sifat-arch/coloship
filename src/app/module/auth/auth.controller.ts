@@ -6,6 +6,7 @@ import type { IRequestUser } from "./auth.interface";
 import { AuthService } from "./auth.service";
 import { AppError } from "../../utils/AppError";
 import config from "../../config";
+import { applyCourierValidationSchema } from "./auth.validition";
 
 const registerCustomer = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
@@ -30,16 +31,16 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   // Access token
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
-    secure: config.node_env === "production",
-    sameSite: config.node_env === "production" ? "none" : "lax",
+    secure: config.node_env === "development" ? false : true,
+    sameSite: config.node_env === "development" ? "lax" : "none",
     maxAge: 1000 * 60 * 60 * 24, // 1 day
   });
 
   // Refresh token
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: config.node_env === "production",
-    sameSite: config.node_env === "production" ? "none" : "lax",
+    secure: config.node_env === "development" ? false : true,
+    sameSite: config.node_env === "development" ? "lax" : "none",
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
   });
 
@@ -63,14 +64,14 @@ const verifyCustomerEmail = catchAsync(async (req: Request, res: Response) => {
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: "none",
+    secure: config.node_env === "development" ? false : true,
+    sameSite: config.node_env === "development" ? "lax" : "none",
     maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
   });
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: "none",
+    secure: config.node_env === "development" ? false : true,
+    sameSite: config.node_env === "development" ? "lax" : "none",
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
   });
 
@@ -114,14 +115,14 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: "none",
+    secure: config.node_env === "development" ? false : true,
+    sameSite: config.node_env === "development" ? "lax" : "none",
     maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
   });
   res.cookie("refreshToken", newRefreshToken, {
     httpOnly: true,
-    secure: false,
-    sameSite: "none",
+    secure: config.node_env === "development" ? false : true,
+    sameSite: config.node_env === "development" ? "lax" : "none",
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
   });
 
@@ -138,6 +139,8 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
 
 const googleLogin = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
+
+  console.log("gogole id token", payload);
 
   const { accessToken, refreshToken } = await AuthService.googleLogin(payload);
 
@@ -168,47 +171,45 @@ const googleLogin = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const registerCourier = catchAsync(async (req: Request, res: Response) => {
-  const payload = req.body;
+const applyAsCourier = catchAsync(async (req: Request, res: Response) => {
+  console.log("BODY:", req.body);
+  console.log("FILES:", req.files);
 
-  // Cloudinary দিয়ে ফাইল আপলোড করা হয়ে থাকলে URL টি পে লোডে যুক্ত করা
-  // if (req.file) {
-  //   payload.profileImageUrl = req.file.path;
-  // }
+  const files = req.files as {
+    [fieldname: string]: Express.Multer.File[];
+  };
 
-  const result = await AuthService.registerCourier(payload);
+  const resume = files?.["resume"]?.[0] ?? null;
+  const profileImage = files?.["profileImage"]?.[0] ?? null;
 
-  const { accessToken, refreshToken, user, courierProfile } = result;
+  const zodValidationResult = applyCourierValidationSchema.safeParse(
+    JSON.parse(req.body.data),
+  );
 
-  // Access token cookie
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: config.node_env === "production",
-    sameSite: config.node_env === "production" ? "none" : "lax",
-    maxAge: 1000 * 60 * 60 * 24, // 1 day
-  });
+  if (!zodValidationResult.success) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      zodValidationResult.error.issues[0].message,
+    );
+  }
 
-  // Refresh token cookie
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: config.node_env === "production",
-    sameSite: config.node_env === "production" ? "none" : "lax",
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-  });
+  const payload = zodValidationResult.data;
+  const userId = req.user?.userId;
+
+  const result = await AuthService.applyAsCourier(
+    userId as string,
+    payload,
+    resume,
+    profileImage,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
     success: true,
-    message: "Courier registered successfully. Pending admin approval.",
-    data: {
-      user,
-      courierProfile,
-      accessToken,
-      refreshToken,
-    },
+    message: "Applied as courier successfully",
+    data: result,
   });
 });
-
 const forgotPassword = catchAsync(async (req: Request, res: Response) => {
   const result = await AuthService.forgotPassword(req.body);
 
@@ -230,6 +231,17 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
     data: null,
   });
 });
+const logout = catchAsync(async (req: Request, res: Response) => {
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "User logged out successfully",
+    data: null,
+  });
+});
 
 export const AuthController = {
   registerCustomer,
@@ -237,8 +249,9 @@ export const AuthController = {
   getMe,
   refreshToken,
   googleLogin,
-  registerCourier,
+  applyAsCourier,
   forgotPassword,
   resetPassword,
   verifyCustomerEmail,
+  logout,
 };

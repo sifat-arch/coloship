@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ColoShip Delivery System - API Documentation for Google Docs</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #1e293b;
+      background-color: #f8fafc;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .action-bar {
+      position: sticky;
+      top: 10px;
+      background: #ffffff;
+      padding: 15px;
+      margin-bottom: 25px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      z-index: 100;
+    }
+    .btn {
+      background-color: #2563eb;
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn:hover {
+      background-color: #1d4ed8;
+    }
+    .instructions {
+      font-size: 13px;
+      color: #64748b;
+    }
+    h1 {
+      color: #0f172a;
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 12px;
+      margin-top: 0;
+      font-size: 28px;
+    }
+    h2 {
+      color: #1e3a8a;
+      margin-top: 35px;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+      font-size: 22px;
+    }
+    h3 {
+      color: #1e40af;
+      margin-top: 25px;
+      font-size: 18px;
+    }
+    h4 {
+      color: #334155;
+      margin-top: 15px;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: monospace;
+      margin-right: 6px;
+    }
+    .get { background-color: #dbeafe; color: #1e40af; }
+    .post { background-color: #dcfce7; color: #166534; }
+    .patch { background-color: #fef3c7; color: #92400e; }
+    .delete { background-color: #fee2e2; color: #991b1b; }
+    
+    .role-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0 25px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f1f5f9;
+      color: #1e293b;
+      font-weight: 600;
+    }
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+    
+    .callout {
+      border-left: 4px solid #3b82f6;
+      background-color: #eff6ff;
+      padding: 12px 16px;
+      border-radius: 0 6px 6px 0;
+      margin: 15px 0;
+    }
+    .callout-title {
+      font-weight: bold;
+      color: #1d4ed8;
+      margin-bottom: 4px;
+    }
+    
+    pre {
+      background-color: #0f172a;
+      color: #f8fafc;
+      padding: 14px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    code {
+      font-family: 'Consolas', 'Courier New', monospace;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+    }
+    .api-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .api-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .endpoint {
+      font-family: monospace;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body>
+
+<div class="action-bar">
+  <div>
+    <button class="btn" onclick="copyDocumentToClipboard()">
+      📋 Copy All for Google Docs (এক ক্লিকে কপি করুন)
+    </button>
+  </div>
+  <div class="instructions" id="statusMessage">
+    বাটনে ক্লিক করার পর Google Docs খুলে <b>Ctrl + V</b> চাপলেই হুবহু সুন্দর ডিজাইনে পেস্ট হবে!
+  </div>
+</div>
+
+<div class="container" id="docContent">
+
+  <h1>📦 ColoShip Delivery System - API Specification Document</h1>
+  <p><b>প্রজেক্ট নাম:</b> ColoShip Backend & Frontend Integration<br>
+  <b>তারিখ:</b> September 2026<br>
+  <b>উদ্দেশ্য:</b> ফ্রন্টএন্ড ডেভেলপমেন্টের জন্য সম্পূর্ণ API এন্ডপয়েন্ট, রিকোয়েস্ট বডি, রেসপন্স ও রোল স্পেসিফিকেশন।</p>
+
+  <div class="callout">
+    <div class="callout-title">💡 গ্লোবাল কনফিগারেশন ও হেডার তথ্য</div>
+    <div>
+      <b>Base URL:</b> <code>http://localhost:5000/api/v1</code><br>
+      <b>Headers:</b><br>
+      • <code>Content-Type: application/json</code><br>
+      • <code>Authorization: Bearer &lt;YOUR_ACCESS_TOKEN&gt;</code> (লগইন করা ইউজারদের জন্য)
+    </div>
+  </div>
+
+  <h2>📑 সূচিপত্র ও রোডম্যাপ (Phases)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Phase</th>
+        <th>ফোকাস মডিউল</th>
+        <th>অগ্রাধিকার</th>
+        <th>মূল উদ্দেশ্য</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>Phase 1</b></td>
+        <td>Core Frontend Blockers</td>
+        <td><span class="badge delete">HIGH</span></td>
+        <td>ফি ক্যালকুলেটর, অ্যাডমিন শিপমেন্ট লিস্ট, নোটিফিকেশন, অ্যাড্রেস CRUD</td>
+      </tr>
+      <tr>
+        <td><b>Phase 2</b></td>
+        <td>Courier & Rider Operations</td>
+        <td><span class="badge patch">MEDIUM</span></td>
+        <td>কুরিয়ার ড্যাশবোর্ড, টাস্ক গ্রহণ/বাতিল, ডেলিভারি প্রুফ (OTP)</td>
+      </tr>
+      <tr>
+        <td><b>Phase 3</b></td>
+        <td>Financial & COD Settlements</td>
+        <td><span class="badge get">IMPORTANT</span></td>
+        <td>রাইডার ক্যাশ ডিপোজিট, মার্চেন্ট পে-আউট, অ্যাডমিন এনালিটিক্স</td>
+      </tr>
+      <tr>
+        <td><b>Phase 4</b></td>
+        <td>Extras & Value Addition</td>
+        <td><span class="badge post">OPTIONAL</span></td>
+        <td>প্রিন্ট ইনভয়েস/লেবেল, বাল্ক পার্সেল তৈরি, রিভিউ ও রেটিং</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== PHASE 1 ==================== -->
+  <h2>🔴 Phase 1: Core Frontend Blockers (ফ্রন্টএন্ডের জন্য সবচেয়ে জরুরি)</h2>
+
+  <h3>১. শিপমেন্ট মডিউল (Shipment Module)</h3>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge post">POST</span>
+      <span class="endpoint">/shipments/calculate-fee</span>
+      <span class="role-badge">Public / Customer</span>
+    </div>
+    <p><b>বিবরণ:</b> পার্সেল তৈরির আগে ওজন ও ডেলিভারি টাইপ দিলে তাৎক্ষণিক চার্জ ক্যালকুলেট করে দেখাবে।</p>
+    <h4>Request Body:</h4>
+    <pre><code>{
+  "weight": 2.5,
+  "deliveryType": "EXPRESS",
+  "codAmount": 1500
+}</code></pre>
+    <h4>Response (200 OK):</h4>
+    <pre><code>{
+  "success": true,
+  "statusCode": 200,
+  "message": "Delivery fee calculated successfully",
+  "data": {
+    "baseFee": 120,
+    "weightCharge": 30,
+    "codFee": 15,
+    "totalDeliveryFee": 165,
+    "currency": "BDT"
+  }
+}</code></pre>
+  </div>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge patch">PATCH</span>
+      <span class="endpoint">/shipments/:id</span>
+      <span class="role-badge">CUSTOMER</span>
+    </div>
+    <p><b>বিবরণ:</b> পার্সেল পিকআপ হওয়ার আগ পর্যন্ত গ্রাহক ডেলিভারি ঠিকানা, বিবরণ বা COD পরিমাণ এডিট করতে পারবে।</p>
+    <h4>Request Body:</h4>
+    <pre><code>{
+  "deliveryAddressId": "uuid-here",
+  "parcelDescription": "Updated fragile note",
+  "codAmount": 1800
+}</code></pre>
+  </div>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge get">GET</span>
+      <span class="endpoint">/shipments/stats</span>
+      <span class="role-badge">CUSTOMER</span>
+    </div>
+    <p><b>বিবরণ:</b> কাস্টমার ড্যাশবোর্ডে পার্সেলের সারসংক্ষেপ দেখানোর জন্য।</p>
+    <h4>Response (200 OK):</h4>
+    <pre><code>{
+  "success": true,
+  "data": {
+    "totalShipments": 24,
+    "pendingPickup": 3,
+    "inTransit": 5,
+    "delivered": 15,
+    "cancelled": 1,
+    "pendingCodToReceive": 12400
+  }
+}</code></pre>
+  </div>
+
+  <h3>২. অ্যাডমিন শিপমেন্ট ম্যানেজমেন্ট (Admin Shipments)</h3>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge get">GET</span>
+      <span class="endpoint">/admin/shipments</span>
+      <span class="role-badge">ADMIN</span>
+    </div>
+    <p><b>বিবরণ:</b> অ্যাডমিন প্যানেলে সমস্ত পার্সেল দেখার ও ফিল্টার করার জন্য।</p>
+    <p><b>Query Params:</b> <code>?page=1&limit=10&status=IN_TRANSIT&searchTerm=CLS-2026</code></p>
+    <h4>Response (200 OK):</h4>
+    <pre><code>{
+  "success": true,
+  "meta": { "page": 1, "limit": 10, "total": 45, "totalPages": 5 },
+  "data": [
+    {
+      "id": "uuid-1",
+      "trackingNumber": "CLS-20260904-A89F",
+      "status": "IN_TRANSIT",
+      "customer": { "name": "Sifat", "phone": "017XXXXXXXX" },
+      "courier": { "user": { "name": "Rider Karim" }, "phone": "018XXXXXXXX" },
+      "deliveryFee": 120,
+      "codAmount": 2500,
+      "createdAt": "2026-09-27T10:00:00.000Z"
+    }
+  ]
+}</code></pre>
+  </div>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge patch">PATCH</span>
+      <span class="endpoint">/admin/shipments/:id/status</span>
+      <span class="role-badge">ADMIN</span>
+    </div>
+    <p><b>বিবরণ:</b> হাব ম্যানেজার সেন্ট্রাল বা লোকাল হাবে পার্সেল পৌঁছালে স্ট্যাটাস আপডেট করবে।</p>
+    <h4>Request Body:</h4>
+    <pre><code>{
+  "status": "AT_ORIGIN_HUB",
+  "location": "Dhaka Sorting Hub",
+  "description": "Parcel received at sorting warehouse"
+}</code></pre>
+  </div>
+
+  <h3>৩. নোটিফিকেশন মডিউল (Notification Module)</h3>
+  <div class="callout">
+    <div class="callout-title">🔔 ডাটাবেজে স্কিমা আছে কিন্তু API ছিল না</div>
+    <div>নিচের API-গুলো ফ্রন্টএন্ডের বেল আইকন, ড্রপডাউন এবং নোটিফিকেশন পেজের জন্য তৈরি করতে হবে।</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>Endpoint</th>
+        <th>Role</th>
+        <th>বিবরণ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge get">GET</span></td>
+        <td><code>/notifications</code></td>
+        <td>All Users</td>
+        <td>লগইন করা ইউজারের নোটিফিকেশন লিস্ট (Pagination সহ)</td>
+      </tr>
+      <tr>
+        <td><span class="badge get">GET</span></td>
+        <td><code>/notifications/unread-count</span></td>
+        <td>All Users</td>
+        <td>ফ্রন্টএন্ডের হেডার বেল আইকনে লাল ব্যাজ কাউন্ট দেখাতে (যেমন: 3)</td>
+      </tr>
+      <tr>
+        <td><span class="badge patch">PATCH</span></td>
+        <td><code>/notifications/:id/read</code></td>
+        <td>All Users</td>
+        <td>নির্দিষ্ট কোনো নোটিফিকেশন পড়া হয়ে গেলে Read মার্ক করা</td>
+      </tr>
+      <tr>
+        <td><span class="badge patch">PATCH</span></td>
+        <td><code>/notifications/mark-all-read</code></td>
+        <td>All Users</td>
+        <td>এক ক্লিকে সব নোটিফিকেশন Read মার্ক করা</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>৪. অ্যাড্রেস ও ইউজার প্রোফাইল (Address & User Profile)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>Endpoint</th>
+        <th>Role</th>
+        <th>বিবরণ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge patch">PATCH</span></td>
+        <td><code>/addresses/:id</code></td>
+        <td>CUSTOMER</td>
+        <td>ঠিকানা আপডেট করা (রোড, বাড়ি, ফোন ইত্যাদি)</td>
+      </tr>
+      <tr>
+        <td><span class="badge delete">DELETE</span></td>
+        <td><code>/addresses/:id</code></td>
+        <td>CUSTOMER</td>
+        <td>ঠিকানা ডিলিট করা (Soft delete)</td>
+      </tr>
+      <tr>
+        <td><span class="badge patch">PATCH</span></td>
+        <td><code>/addresses/:id/set-default</code></td>
+        <td>CUSTOMER</td>
+        <td>ডিফল্ট পিকআপ বা ডেলিভারি ঠিকানা হিসেবে সেট করা</td>
+      </tr>
+      <tr>
+        <td><span class="badge patch">PATCH</span></td>
+        <td><code>/user/profile</code></td>
+        <td>All Users</td>
+        <td>নাম, ফোন নম্বর, মার্চেন্ট কোম্পানির নাম আপডেট</td>
+      </tr>
+      <tr>
+        <td><span class="badge patch">PATCH</span></td>
+        <td><code>/user/change-password</code></td>
+        <td>All Users</td>
+        <td>পুরোনো পাসওয়ার্ড ও নতুন পাসওয়ার্ড দিয়ে পাসওয়ার্ড পরিবর্তন</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== PHASE 2 ==================== -->
+  <h2>🟠 Phase 2: Courier & Rider Operations (কুরিয়ার/রাইডার অ্যাপ)</h2>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge get">GET</span>
+      <span class="endpoint">/courier/dashboard-stats</span>
+      <span class="role-badge">COURIER</span>
+    </div>
+    <p><b>বিবরণ:</b> রাইডার ড্যাশবোর্ডে আজকের ডেলিভারি ও জমা ক্যাশের রিয়েলটাইম তথ্য।</p>
+    <h4>Response:</h4>
+    <pre><code>{
+  "success": true,
+  "data": {
+    "activeTasks": 4,
+    "completedToday": 7,
+    "pendingCashInHand": 8500,
+    "todayEarnings": 450
+  }
+}</code></pre>
+  </div>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge patch">PATCH</span>
+      <span class="endpoint">/courier/assignments/:id/respond</span>
+      <span class="role-badge">COURIER</span>
+    </div>
+    <p><b>বিবরণ:</b> অ্যাডমিন কোনো পার্সেল অ্যাসাইন করলে রাইডার তা গ্রহণ (Accept) বা রিজেক্ট (Reject) করবে।</p>
+    <h4>Request Body:</h4>
+    <pre><code>{
+  "action": "ACCEPT" // অথবা "REJECT", রিজেক্ট করলে "reason": "Out of delivery area"
+}</code></pre>
+  </div>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge post">POST</span>
+      <span class="endpoint">/courier/assignments/:id/fail</span>
+      <span class="role-badge">COURIER</span>
+    </div>
+    <p><b>বিবরণ:</b> ডেলিভারি ব্যর্থ হলে কারণ রেকর্ড করা।</p>
+    <h4>Request Body:</h4>
+    <pre><code>{
+  "reason": "CUSTOMER_UNREACHABLE", // WRONG_ADDRESS, CUSTOMER_REFUSED
+  "note": "Called 3 times, phone switched off"
+}</code></pre>
+  </div>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge post">POST</span>
+      <span class="endpoint">/courier/assignments/:id/verify-delivery</span>
+      <span class="role-badge">COURIER</span>
+    </div>
+    <p><b>বিবরণ:</b> ডেলিভারি সম্পন্ন করার আগে কাস্টমারের ফোনে পাঠানো OTP রাইডার এন্ট্রি দেবে, যাতে ফ্রড না হয়।</p>
+    <h4>Request Body:</h4>
+    <pre><code>{
+  "otp": "452109",
+  "collectedAmount": 1500
+}</code></pre>
+  </div>
+
+  <!-- ==================== PHASE 3 ==================== -->
+  <h2>🟡 Phase 3: COD Settlement & Financial Flow (টাকা পয়সার হিসাব)</h2>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge post">POST</span>
+      <span class="endpoint">/admin/settlements/courier-deposit</span>
+      <span class="role-badge">ADMIN</span>
+    </div>
+    <p><b>বিবরণ:</b> রাইডার দিনের শেষে হাবে ক্যাশ জমা দিলে অ্যাডমিন তা কনফার্ম করবে।</p>
+    <h4>Request Body:</h4>
+    <pre><code>{
+  "courierId": "courier-uuid",
+  "amount": 8500,
+  "shipmentIds": ["uuid-1", "uuid-2"],
+  "note": "Received full COD amount for today"
+}</code></pre>
+  </div>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge post">POST</span>
+      <span class="endpoint">/admin/settlements/merchant-payout</span>
+      <span class="role-badge">ADMIN</span>
+    </div>
+    <p><b>বিবরণ:</b> সফল ডেলিভারিগুলোর COD টাকা মার্চেন্টের বিকাশ বা ব্যাংকে পাঠানোর পর রেকর্ড করা।</p>
+    <h4>Request Body:</h4>
+    <pre><code>{
+  "merchantId": "user-uuid",
+  "payableAmount": 18200,
+  "paymentMethod": "BKASH",
+  "transactionId": "TRX987456321",
+  "shipmentIds": ["uuid-3", "uuid-4"]
+}</code></pre>
+  </div>
+
+  <div class="api-card">
+    <div class="api-header">
+      <span class="badge get">GET</span>
+      <span class="endpoint">/admin/dashboard/overview</span>
+      <span class="role-badge">ADMIN</span>
+    </div>
+    <p><b>বিবরণ:</b> অ্যাডমিন ড্যাশবোর্ডের গ্রাফ ও মূল মেট্রিক্স।</p>
+    <h4>Response:</h4>
+    <pre><code>{
+  "success": true,
+  "data": {
+    "totalShipments": 1250,
+    "deliveredCount": 1100,
+    "inTransitCount": 85,
+    "totalRevenue": 175000,
+    "totalCodCollected": 890000,
+    "pendingMerchantPayout": 45000,
+    "activeCouriers": 14
+  }
+}</code></pre>
+  </div>
+
+  <!-- ==================== FRONTEND SCREEN MAPPING ==================== -->
+  <h2>🖥️ ফ্রন্টএন্ড স্ক্রিনের সাথে API ম্যাপিং চার্ট</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Frontend Screen / Page</th>
+        <th>যেসব API কল করতে হবে</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>Create Parcel (নতুন পার্সেল তৈরি)</b></td>
+        <td>
+          1. <code>GET /addresses</code> (পিকআপ ঠিকানার লিস্ট)<br>
+          2. <code>POST /shipments/calculate-fee</code> (লাইভ ফি ক্যালকুলেশন)<br>
+          3. <code>POST /shipments/</code> (পার্সেল তৈরি)<br>
+          4. <code>POST /payments/initiate</code> (বিকাশ বা COD সিলেক্ট করা)
+        </td>
+      </tr>
+      <tr>
+        <td><b>Customer Dashboard</b></td>
+        <td>
+          1. <code>GET /shipments/stats</code> (পার্সেল কাউন্ট ও পেন্ডিং টাকা)<br>
+          2. <code>GET /shipments/my-shipments?limit=5</code> (সাম্প্রতিক পার্সেল)<br>
+          3. <code>GET /notifications/unread-count</code> (হেডার বেল আইকন)
+        </td>
+      </tr>
+      <tr>
+        <td><b>Admin Shipments Table</b></td>
+        <td>
+          1. <code>GET /admin/shipments</code> (ফিল্টারিং ও পেজিনেশন)<br>
+          2. <code>GET /admin/available-courier</code> (অ্যাসাইন করার ড্রপডাউন)<br>
+          3. <code>PATCH /admin/shipments/:id/assign</code> (কুরিয়ার নির্ধারণ)
+        </td>
+      </tr>
+      <tr>
+        <td><b>Rider Active Tasks Screen</b></td>
+        <td>
+          1. <code>GET /courier/assignments?status=ASSIGNED</code><br>
+          2. <code>PATCH /courier/assignments/:id/status</code> (Picked Up / Delivered)<br>
+          3. <code>POST /courier/assignments/:id/verify-delivery</code> (OTP ইনপুট)
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <br>
+  <hr>
+  <p style="text-align: center; color: #64748b; font-size: 13px;">
+    ColoShip Delivery System Architecture &copy; 2026. Ready for Google Docs.
+  </p>
+
+</div>
+
+<script>
+  function copyDocumentToClipboard() {
+    const docElement = document.getElementById('docContent');
+    const range = document.createRange();
+    range.selectNode(docElement);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+
+    try {
+      const successful = document.execCommand('copy');
+      const status = document.getElementById('statusMessage');
+      if (successful) {
+        status.innerHTML = "✅ <b style='color:#16a34a;'>সফলভাবে কপি হয়েছে!</b> এখন Google Docs-এ গিয়ে <b>Ctrl + V</b> দিন।";
+      } else {
+        status.innerHTML = "❌ কপি ব্যর্থ হয়েছে। অনুগ্রহ করে মাউস দিয়ে সিলেক্ট করে কপি করুন।";
+      }
+    } catch (err) {
+      console.error('Copy failed', err);
+    }
+    window.getSelection().removeAllRanges();
+  }
+</script>
+
+</body>
+</html>

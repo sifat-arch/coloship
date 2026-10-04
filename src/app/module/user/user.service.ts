@@ -1,4 +1,5 @@
 import { UploadApiResponse } from "cloudinary";
+import { UserStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
 import { cloudinary } from "../../lib/cloulinary";
 import { AppError } from "../../utils/AppError";
@@ -12,8 +13,27 @@ const uploadProfileImage = async (buffer: Buffer, userId: string) => {
     select: {
       imagePublicId: true,
       imageUrl: true,
+      status: true,
     },
   });
+
+  if (!currentUser) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (currentUser.status === UserStatus.SUSPENDED) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Your account is suspended. You cannot update profile image.",
+    );
+  }
+
+  if (currentUser.status === UserStatus.BLOCKED) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Your account is blocked. You cannot update profile image.",
+    );
+  }
 
   const cloudinaryResult = await new Promise<UploadApiResponse>(
     (resolve, reject) => {
