@@ -26,7 +26,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
 
   const result = await AuthService.loginUser(payload);
 
-  const { accessToken, refreshToken } = result;
+  const { accessToken, refreshToken, user } = result;
 
   // Access token
   res.cookie("accessToken", accessToken, {
@@ -51,6 +51,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
     data: {
       accessToken,
       refreshToken,
+      user,
     },
   });
 });
@@ -142,7 +143,7 @@ const googleLogin = catchAsync(async (req: Request, res: Response) => {
 
   console.log("gogole id token", payload);
 
-  const { accessToken, refreshToken } = await AuthService.googleLogin(payload);
+  const { accessToken, refreshToken, user } = await AuthService.googleLogin(payload);
 
   // Access token
   res.cookie("accessToken", accessToken, {
@@ -167,6 +168,7 @@ const googleLogin = catchAsync(async (req: Request, res: Response) => {
     data: {
       accessToken,
       refreshToken,
+      user,
     },
   });
 });

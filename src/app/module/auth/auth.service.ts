@@ -5,6 +5,7 @@ import {
   NotificationType,
   Role,
   UserStatus,
+  VerificationStatus,
 } from "../../../generated/prisma/enums";
 import config from "../../config";
 import { prisma } from "../../lib/prisma";
@@ -280,6 +281,9 @@ const loginUser = async (payload: ILoginUserPayload) => {
   // Find user
   const user = await prisma.user.findUnique({
     where: { email },
+    include: {
+      courierProfile: true,
+    },
   });
 
   if (!user) {
@@ -314,12 +318,26 @@ const loginUser = async (payload: ILoginUserPayload) => {
     throw new AppError(httpStatus.UNAUTHORIZED, "Invalid email or password");
   }
 
+  // If user has an approved courier profile, sync role to COURIER
+  let currentRole = user.role;
+  if (
+    user.role === Role.CUSTOMER &&
+    user.courierProfile?.isApproved &&
+    user.courierProfile?.VerificationStatus === VerificationStatus.APPROVED
+  ) {
+    currentRole = Role.COURIER;
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { role: Role.COURIER },
+    });
+  }
+
   // JWT payload
   const jwtPayload = {
     userId: user.id,
     name: user.name,
     email: user.email,
-    role: user.role,
+    role: currentRole,
   };
 
   // Access token
@@ -339,6 +357,13 @@ const loginUser = async (payload: ILoginUserPayload) => {
   return {
     accessToken,
     refreshToken,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: currentRole,
+      status: user.status,
+    },
   };
 };
 
@@ -347,6 +372,9 @@ const getMe = async (user: IRequestUser) => {
     where: {
       id: user.userId,
     },
+    include: {
+      courierProfile: true,
+    },
     omit: {
       password: true,
     },
@@ -354,6 +382,18 @@ const getMe = async (user: IRequestUser) => {
 
   if (!isUserExists) {
     throw new Error("User not found");
+  }
+
+  if (
+    isUserExists.role === Role.CUSTOMER &&
+    isUserExists.courierProfile?.isApproved &&
+    isUserExists.courierProfile?.VerificationStatus === VerificationStatus.APPROVED
+  ) {
+    isUserExists.role = Role.COURIER;
+    await prisma.user.update({
+      where: { id: isUserExists.id },
+      data: { role: Role.COURIER },
+    });
   }
 
   return isUserExists;
@@ -501,11 +541,28 @@ const googleLogin = async (payload: IGoogleLoginIdTokenPayload) => {
   //   throw new AppError(httpStatus.NOT_FOUND, "User is Deleted");
   // }
 
+  const courierProfile = await prisma.courierProfile.findUnique({
+    where: { userId: user.id },
+  });
+
+  let currentRole = user.role;
+  if (
+    user.role === Role.CUSTOMER &&
+    courierProfile?.isApproved &&
+    courierProfile?.VerificationStatus === VerificationStatus.APPROVED
+  ) {
+    currentRole = Role.COURIER;
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { role: Role.COURIER },
+    });
+  }
+
   const jwtPayload = {
     userId: user.id,
     name: user.name,
     email: user.email,
-    role: user.role,
+    role: currentRole,
   };
 
   const accessToken = jwtUtils.createToken(
@@ -523,6 +580,13 @@ const googleLogin = async (payload: IGoogleLoginIdTokenPayload) => {
   return {
     accessToken,
     refreshToken,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: currentRole,
+      status: user.status,
+    },
   };
 };
 
@@ -586,7 +650,7 @@ const applyAsCourier = async (
 
       resumePublicId: resumeUploadResult?.public_id ?? null,
 
-      status: UserStatus.PENDING,
+      VerificationStatus: UserStatus.PENDING,
       isApproved: false,
       isAvailable: false,
     },

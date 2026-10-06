@@ -657,17 +657,30 @@ const approveCourier = async (courierProfileId: string) => {
     throw new AppError(httpStatus.BAD_REQUEST, "Courier is already approved");
   }
 
-  const result = await prisma.courierProfile.update({
-    where: {
-      id: courierProfileId,
-    },
-    data: {
-      VerificationStatus: "APPROVED",
-      isApproved: true,
-    },
-    include: {
-      user: true,
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedCourier = await tx.courierProfile.update({
+      where: {
+        id: courierProfileId,
+      },
+      data: {
+        VerificationStatus: "APPROVED",
+        isApproved: true,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    await tx.user.update({
+      where: {
+        id: courier.userId,
+      },
+      data: {
+        role: Role.COURIER,
+      },
+    });
+
+    return updatedCourier;
   });
 
   // Notify courier that application is approved
@@ -697,17 +710,30 @@ const rejectCourier = async (courierProfileId: string) => {
     throw new AppError(httpStatus.BAD_REQUEST, "Courier is already rejected");
   }
 
-  const result = await prisma.courierProfile.update({
-    where: {
-      id: courierProfileId,
-    },
-    data: {
-      isApproved: false,
-      VerificationStatus: "REJECTED",
-    },
-    include: {
-      user: true,
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedCourier = await tx.courierProfile.update({
+      where: {
+        id: courierProfileId,
+      },
+      data: {
+        isApproved: false,
+        VerificationStatus: "REJECTED",
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    await tx.user.update({
+      where: {
+        id: courier.userId,
+      },
+      data: {
+        role: Role.CUSTOMER,
+      },
+    });
+
+    return updatedCourier;
   });
 
   return result;
